@@ -27,31 +27,30 @@ edge_chamfer_x = 1.6;       // горизонтальный вылет фаск�
 edge_chamfer_y = 1.6;       // горизонтальный вылет фаски по Y (с каждой стороны), мм - убрана фаска
 screen_frame_gap = 0.2;      // только для высоты вычитаний в рамке (не влияет на XY)
 
- 
 // ===== Параметры платы и экрана =====
-board_length = 137;          // длина платы, мм
-board_width  = 84;           // ширина платы, мм
+board_width  = 84;           // ширина платы (X), мм
+board_height = 137;          // высота платы (Y), мм
 board_thickness = 1.5;       // толщина платы, мм
 
-screen_length = 120;         // длина (горизонталь) экрана, мм
-screen_width  = 75.5;        // ширина (вертикаль) экрана, мм
+screen_width  = 75.5;        // ширина (горизонталь, X) экрана, мм
+screen_height = 120;         // высота (вертикаль, Y) экрана, мм
  
 // ===== Габариты основания/рамки =====
-base_margin_x = 0;           // отступы к габариту НЕ используются — внешние размеры = board_length/board_width
+base_margin_x = 0;           // отступы к габариту НЕ используются — внешние размеры = board_width/board_height
 base_margin_y = 0;           // внешняя ширина = board_width
 base_thickness = 3;          // толщина основания, мм
 base_edge_multiplier = 0;     // 
 
-frame_thickness = 4;         // толщина рамки, мм
-window_clearance_x = 2;      // припуск (каждая сторона) к окну под экран, мм
-window_clearance_y = 0.5;
+frame_thickness = 5;         // толщина рамки, мм
+window_clearance_x = 0.5;      // припуск (каждая сторона) к окну под экран, мм
+window_clearance_y = 0.8;
 
 // ===== Параметры крепёжных отверстий, стоек и штырей =====
-hole_spacing_x = 129;      // расстояние между отверстиями по X, мм
-hole_spacing_y = 75;         // расстояние между отверстиями по Y, мм
+hole_spacing_x = 75;      // расстояние между отверстиями по X, мм
+hole_spacing_y = 129;         // расстояние между отверстиями по Y, мм
 hole_diameter_board = 3;     // диаметр отверстий в плате (под винт/штырь), мм
-hole_edge_tweak_x = 0.5;   // на сколько ближе к краям по X
-hole_edge_tweak_y = 1;   // на сколько ближе к краям по Y
+hole_edge_tweak_x = 1;   // на сколько ближе к краям по X
+hole_edge_tweak_y = 0.5;   // на сколько ближе к краям по Y
 
 standoff_outer_diam = 5;     // диаметр стоек (опора под плату), мм
 standoff_height = 4.5;       // высота стоек до низа платы, мм
@@ -61,33 +60,33 @@ pin_diam  = hole_diameter_board - 0.1; // диаметр штыря = отвер
 pin_tip_h = 0.8;             // конус-направляющая на конце штыря (0 — выключить)
 
 // ===== Вычисляемые величины (общие для base и frame) =====
-base_length = board_length;    // внешние габариты деталей строго равны размерам платы
-base_width  = board_width;     // внешние габариты деталей строго равны размерам платы
+base_width  = board_width;     // внешние габариты деталей (X) строго равны размерам платы
+base_height = board_height;    // внешние габариты деталей (Y) строго равны размерам платы
 
 // Отступы отверстий от краёв детали (симметричные) + сдвиг к краю на 1 мм
-edge_x = max(0, (base_length - hole_spacing_x)/2 - hole_edge_tweak_x);
-edge_y = max(0, (base_width  - hole_spacing_y)/2 - hole_edge_tweak_y);
+edge_x = max(0, (base_width  - hole_spacing_x)/2 - hole_edge_tweak_x);
+edge_y = max(0, (base_height - hole_spacing_y)/2 - hole_edge_tweak_y);
 
 // Позиции центров отверстий (общие для base и frame)
 hole_positions = [
     [edge_x,                 edge_y                ], // нижний левый
-    [edge_x,                 base_width - edge_y   ], // верхний левый
-    [base_length - edge_x,   edge_y                ], // нижний правый
-    [base_length - edge_x,   base_width - edge_y   ]  // верхний правый
+    [edge_x,                 base_height - edge_y  ], // верхний левый
+    [base_width  - edge_x,   edge_y                ], // нижний правый
+    [base_width  - edge_x,   base_height - edge_y  ]  // верхний правый
 ];
 
 // Проверочный вывод одинаковости полей (должны совпадать попарно)
 left_margin   = hole_positions[0][0];
-right_margin  = base_length - hole_positions[2][0];
+right_margin  = base_width - hole_positions[2][0];
 bottom_margin = hole_positions[0][1];
-top_margin    = base_width - hole_positions[1][1];
+top_margin    = base_height - hole_positions[1][1];
 echo("Margins to edges (L,R,B,T):", left_margin, right_margin, bottom_margin, top_margin);
 
 // Размер окна под экран (сквозное)
-open_len = screen_length + 2*window_clearance_x;
-open_wid = screen_width  + 2*window_clearance_y;
-open_off_x = (base_length - open_len)/2;   // одинаково для base и frame
-open_off_y = (base_width  - open_wid)/2;
+open_width = screen_width + 2*window_clearance_y; // X
+open_height = screen_height  + 2*window_clearance_x; // Y
+open_off_x = (base_width  - open_width)/2;   // одинаково для base и frame (X)
+open_off_y = (base_height - open_height)/2;   // (Y)
 
 // ===== Вспомогательное =====
 function clamp(val, lo, hi) = max(lo, min(val, hi));
@@ -116,7 +115,7 @@ module chamfered_plate_bottom_edges_sym(l,w,t,chz,chx,chy){
 // ===== Детали =====
 module basePlate(){
     // Основание
-    color("lightgray") chamfered_plate_bottom_edges_sym(base_length, base_width, base_thickness, edge_chamfer_z*base_edge_multiplier, edge_chamfer_x*base_edge_multiplier, edge_chamfer_y*base_edge_multiplier);
+    color("lightgray") chamfered_plate_bottom_edges_sym(base_width, base_height, base_thickness, edge_chamfer_z*base_edge_multiplier, edge_chamfer_x*base_edge_multiplier, edge_chamfer_y*base_edge_multiplier);
 
     // Стойки + штыри
     for (pos = hole_positions){
@@ -133,10 +132,10 @@ module basePlate(){
 module screenFrame(){
     // Рамка
     difference(){
-        color("silver") chamfered_plate_bottom_edges_sym(base_length, base_width, frame_thickness, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
+        color("silver") chamfered_plate_bottom_edges_sym(base_width, base_height, frame_thickness, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
         // окно под экран (сквозное). ВЫСОТА с учётом screen_frame_gap, НО XY не трогаем
         translate([open_off_x, open_off_y, -tiny])
-            cube([open_len, open_wid, frame_thickness + screen_frame_gap + 2*tiny]);
+            cube([open_width, open_height, frame_thickness + screen_frame_gap + 2*tiny]);
         // отверстия под штыри
         for (pos = hole_positions)
             translate([pos[0], pos[1], -tiny])
@@ -166,5 +165,5 @@ if (test_fragment) {
     }
 } else {
     if (print_base) basePlate();
-    if (print_frame) translate([0, base_width + 10, 0]) screenFrame();
+    if (print_frame) translate([0, base_height + 10, 0]) screenFrame();
 }
