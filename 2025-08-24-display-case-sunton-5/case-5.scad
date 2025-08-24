@@ -16,6 +16,10 @@ frag_index    = 0;      // 0=НЛ, 1=ВЛ, 2=НП, 3=ВП (относитель�
 frag_gap_x    = 10;     // зазор между фрагментами по X, мм
 frag_h_extra  = 20;     // запас по высоте клипа, мм
 
+// ===== Выбор печатаемых деталей =====
+print_base  = true;     // печатать основание
+print_frame = false;     // печатать рамку
+
 // ===== Общие доп. параметры =====
 tiny = 0.1;                  // небольшой зазор для булевых операций
 edge_chamfer_z = 4;       // высота фаски по Z (мм) - убрана фаска
@@ -35,7 +39,7 @@ screen_width  = 75.5;        // ширина (вертикаль) экрана, 
 // ===== Габариты основания/рамки =====
 base_margin_x = 0;           // отступы к габариту НЕ используются — внешние размеры = board_length/board_width
 base_margin_y = 0;           // внешняя ширина = board_width
-base_thickness = 2;          // толщина основания, мм
+base_thickness = 3;          // толщина основания, мм
 base_edge_multiplier = 0;     // 
 
 frame_thickness = 4;         // толщина рамки, мм
@@ -144,19 +148,23 @@ module screenFrame(){
 pos = hole_positions[frag_index];
 
 if (test_fragment) {
-    // Фрагмент основания
-    intersection() {
-        basePlate();
-        translate([pos[0] - frag_size/2, pos[1] - frag_size/2, -1])
-            cube([frag_size, frag_size, base_thickness + standoff_height + board_thickness + pin_extra + frag_h_extra]);
+    if (print_base) {
+        // Фрагмент основания
+        intersection() {
+            basePlate();
+            translate([pos[0] - frag_size/2, pos[1] - frag_size/2, -1])
+                cube([frag_size, frag_size, base_thickness + standoff_height + board_thickness + pin_extra + frag_h_extra]);
+        }
     }
-    // Фрагмент рамки — справа
-    intersection() {
-        translate([frag_size + frag_gap_x, 0, 0]) screenFrame();
-        translate([pos[0] - frag_size/2 + frag_size + frag_gap_x, pos[1] - frag_size/2, -1])
-            cube([frag_size, frag_size, frame_thickness + screen_frame_gap + frag_h_extra]);
+    if (print_frame) {
+        // Фрагмент рамки — справа
+        intersection() {
+            translate([frag_size + frag_gap_x, 0, 0]) screenFrame();
+            translate([pos[0] - frag_size/2 + frag_size + frag_gap_x, pos[1] - frag_size/2, -1])
+                cube([frag_size, frag_size, frame_thickness + screen_frame_gap + frag_h_extra]);
+        }
     }
 } else {
-    //basePlate();
-    translate([0, base_width + 10, 0]) screenFrame();
+    if (print_base) basePlate();
+    if (print_frame) translate([0, base_width + 10, 0]) screenFrame();
 }
