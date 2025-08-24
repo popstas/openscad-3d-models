@@ -63,6 +63,7 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
   try {
     fs.mkdirSync(path.dirname(stl), { recursive: true });
     await render(scad, stl);
+    console.log(`Built: ${path.relative(ROOT, stl)}`);
     return 'built';
   } catch (e) {
     console.error(`Error rendering ${scad}:`, (e as Error).message);
@@ -85,14 +86,15 @@ async function compileAll(): Promise<void> {
   if (failed > 0) process.exitCode = 1;
 }
 
-// Global debounce to rebuild all outdated models when any .scad changes.
-let globalTimer: NodeJS.Timeout | null = null;
-function scheduleAll() {
-  if (globalTimer) clearTimeout(globalTimer);
-  globalTimer = setTimeout(() => {
-    globalTimer = null;
-    void compileAll();
+// Per-file debounce to rebuild only the changed file
+const fileTimers = new Map<string, NodeJS.Timeout>();
+function scheduleFile(scadFile: string) {
+  if (fileTimers.has(scadFile)) clearTimeout(fileTimers.get(scadFile)!);
+  const timer = setTimeout(() => {
+    fileTimers.delete(scadFile);
+    void buildIfOutdated(scadFile);
   }, THROTTLE_MS);
+  fileTimers.set(scadFile, timer);
 }
 
 // =============== Native watchers (fs.watch + fs.watchFile) ===============
@@ -126,7 +128,7 @@ function watchFileIfNeeded(file: string) {
   try {
     fs.watchFile(file, { interval: WATCH_FILE_INTERVAL }, () => {
       console.log(`File changed (poll): ${path.relative(ROOT, file)}`);
-      scheduleAll();
+      scheduleFile(file);
     });
     watchedFiles.add(file);
   } catch (e) {
@@ -157,9 +159,11 @@ function ensureDirWatcher(dir: string) {
           watchedFiles.delete(full);
         }
       }
-      // Any change triggers global rebuild debounce
+      // Any change triggers rebuild of the specific file
       // console.log(`Dir event: ${event} -> ${path.relative(ROOT, full)}`);
-      scheduleAll();
+      if (full.toLowerCase().endsWith('.scad')) {
+        scheduleFile(full);
+      }
     });
     w.on('error', (err) => console.warn('Dir watcher error:', path.relative(ROOT, dir), err.message));
     dirWatchers.set(dir, w);
