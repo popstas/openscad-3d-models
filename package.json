@@ -1,0 +1,19 @@
+{
+  "name": "openscad-3d-models",
+  "version": "1.0.0",
+  "description": "A collection of small, self‑contained OpenSCAD models organized by date and slug. Each folder contains the source .scad and, optionally, exported .stl files.",
+  "main": "index.js",
+  "scripts": {
+    "watch": "node --watch --env-file=.env --import tsx src/watch.ts",
+    "build": "tsc -p .",
+    "test": "echo \"No tests\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

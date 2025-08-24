@@ -1,0 +1,21 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+node_modules/
+dist/
+*.swp
+*.swo
+
+# Environment
+.env
+
+# Generated / exports
+*.stl
+*.3mf
+*.gcode
+*.factory
+
+# Git
+.git/
