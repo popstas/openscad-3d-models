@@ -18,10 +18,11 @@ frag_h_extra  = 20;     // запас по высоте клипа, мм
 
 // ===== Общие доп. параметры =====
 tiny = 0.1;                  // небольшой зазор для булевых операций
-edge_chamfer_z = 1;       // высота фаски по Z (мм)
-edge_chamfer_x = 5;       // горизонтальный вылет фаски по X (с каждой стороны), мм
-edge_chamfer_y = 5;       // горизонтальный вылет фаски по Y (с каждой стороны), мм
+edge_chamfer_z = 4;       // высота фаски по Z (мм) - убрана фаска
+edge_chamfer_x = 1.6;       // горизонтальный вылет фаски по X (с каждой стороны), мм - убрана фаска
+edge_chamfer_y = 1.6;       // горизонтальный вылет фаски по Y (с каждой стороны), мм - убрана фаска
 screen_frame_gap = 0.2;      // только для высоты вычитаний в рамке (не влияет на XY)
+
  
 // ===== Параметры платы и экрана =====
 board_length = 137;          // длина платы, мм
@@ -35,9 +36,11 @@ screen_width  = 75.5;        // ширина (вертикаль) экрана, 
 base_margin_x = 0;           // отступы к габариту НЕ используются — внешние размеры = board_length/board_width
 base_margin_y = 0;           // внешняя ширина = board_width
 base_thickness = 2;          // толщина основания, мм
+base_edge_multiplier = 0;     // 
 
-frame_thickness = 2;         // толщина рамки, мм
-window_clearance = 0.5;      // припуск (каждая сторона) к окну под экран, мм
+frame_thickness = 4;         // толщина рамки, мм
+window_clearance_x = 2;      // припуск (каждая сторона) к окну под экран, мм
+window_clearance_y = 0.5;
 
 // ===== Параметры крепёжных отверстий, стоек и штырей =====
 hole_spacing_x = 129;      // расстояние между отверстиями по X, мм
@@ -77,8 +80,8 @@ top_margin    = base_width - hole_positions[1][1];
 echo("Margins to edges (L,R,B,T):", left_margin, right_margin, bottom_margin, top_margin);
 
 // Размер окна под экран (сквозное)
-open_len = screen_length + 2*window_clearance;
-open_wid = screen_width  + 2*window_clearance;
+open_len = screen_length + 2*window_clearance_x;
+open_wid = screen_width  + 2*window_clearance_y;
 open_off_x = (base_length - open_len)/2;   // одинаково для base и frame
 open_off_y = (base_width  - open_wid)/2;
 
@@ -109,7 +112,7 @@ module chamfered_plate_bottom_edges_sym(l,w,t,chz,chx,chy){
 // ===== Детали =====
 module basePlate(){
     // Основание
-    color("lightgray") chamfered_plate_bottom_edges_sym(base_length, base_width, base_thickness, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
+    color("lightgray") chamfered_plate_bottom_edges_sym(base_length, base_width, base_thickness, edge_chamfer_z*base_edge_multiplier, edge_chamfer_x*base_edge_multiplier, edge_chamfer_y*base_edge_multiplier);
 
     // Стойки + штыри
     for (pos = hole_positions){
@@ -154,6 +157,6 @@ if (test_fragment) {
             cube([frag_size, frag_size, frame_thickness + screen_frame_gap + frag_h_extra]);
     }
 } else {
-    basePlate();
+    //basePlate();
     translate([0, base_width + 10, 0]) screenFrame();
 }
