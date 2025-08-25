@@ -189,4 +189,12 @@ manual_outer_taper_total_y = 10.0; // Меньше сужение по Y
 - Добавление крепёжных элементов для фиксации на поверхности
 - Создание версии с несколькими гнёздами для разных устройств
 
+## Превью
+
+![ecig-platform 0](ecig-platform.0.png)
+
+![ecig-platform 1](ecig-platform.1.png)
+
+![ecig-platform 2](ecig-platform.2.png)
+
 

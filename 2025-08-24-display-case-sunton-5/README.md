@@ -56,3 +56,11 @@ standoff_outer_diam = 5; standoff_height = 4.5; pin_extra = frame_thickness; pin
 
 ## Лицензия
 MIT
+
+## Превью
+
+![case-5 0](case-5.0.png)
+
+![case-5 1](case-5.1.png)
+
+![case-5 2](case-5.2.png)

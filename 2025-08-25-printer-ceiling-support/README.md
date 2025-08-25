@@ -88,3 +88,11 @@ arm_len_tf = 40; height_tf_total = 50; post_h_tf = height_tf_total - (base_th + 
 
 ## Лицензия
 MIT
+
+## Превью
+
+![printer-ceiling 0](printer-ceiling.0.png)
+
+![printer-ceiling 1](printer-ceiling.1.png)
+
+![printer-ceiling 2](printer-ceiling.2.png)

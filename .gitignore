@@ -13,7 +13,6 @@ dist/
 
 # Generated / exports
 *.stl
-*.png
 *.3mf
 *.gcode
 *.factory
