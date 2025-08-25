@@ -36,6 +36,7 @@ pin_fs = 0.25;  // чуть тоньше для штырей и отверсти
 // Тестовые фрагменты (стандартный блок)
 // ----------------------------
 test_fragment = false; // true — печатать только укороченные фрагменты
+no_bottom_pad_left = true;
 frag_size     = 50;    // размер квадрата вырезки, мм (для обрезки intersection)
 frag_gap_x    = 10;    // зазор между фрагментами по X, мм
 frag_h_extra  = 50;    // запас по высоте клипа, мм
@@ -230,10 +231,21 @@ module clip_for_fragments(){
     }
 }
 
+module clip_for_bottom_pad_left(){
+    if(no_bottom_pad_left)
+        difference() {
+            children();
+            translate(v = [0, radius_r/2 + frame_w + 7, 0])
+              cube([20+20, 50, 50], center=false);
+        }
+    else
+        children();
+}
+
 // ----------------------------
 // ВЫВОД МОДЕЛИ
 // ----------------------------
-clip_for_fragments() base();
+clip_for_fragments() clip_for_bottom_pad_left() base();
 
 // ----------------------------
 // Примечания по ориентации:
