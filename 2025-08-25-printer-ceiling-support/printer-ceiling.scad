@@ -193,7 +193,7 @@ module wrap_tabs(){
 // Полная сборка модели
 module base(){
     len = test_fragment ? arm_len_tf : arm_len_full;
-    h   = test_fragment ? post_h_tf   : post_h_full;
+    h = test_fragment ? post_h_tf   : post_h_full;
 
     union(){
         top_pad();

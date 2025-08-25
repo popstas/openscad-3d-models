@@ -5,9 +5,14 @@ import path from 'path';
 const ROOT = process.cwd();
 const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'openscad';
 const THROTTLE_MS = 1000;
+const IMG_SIZE = process.env.OPENSCAD_IMG_SIZE || '1200,900';
 
 function toStl(scadPath: string): string {
   return scadPath.replace(/\.scad$/i, '.stl');
+}
+
+function toPng(scadPath: string, view: '0' | '1' | '2'): string {
+  return scadPath.replace(/\.scad$/i, `.${view}.png`);
 }
 
 function statSafe(p: string): fs.Stats | null {
@@ -42,28 +47,74 @@ function render(scad: string, stl: string): Promise<void> {
   });
 }
 
+type CamView = { name: '0' | '1' | '2'; camera: string; projection: 'o' | 'p' };
+const PNG_VIEWS: CamView[] = [
+  // --camera = tx,ty,tz,rx,ry,rz,dist ; --viewall will frame the model
+  { name: '0',     camera: '0,0,0,55,0,25,500',  projection: 'p' },
+  { name: '1',   camera: '0,0,0,0,0,0,500',    projection: 'o' },
+  { name: '2', camera: '0,0,0,0,0,90,500',   projection: 'o' },
+];
+
+function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '-o', png,
+      '--imgsize=' + IMG_SIZE,
+      '--projection=' + cam.projection,
+      '--camera=' + cam.camera,
+      '--render',
+      '--viewall',
+      '--autocenter',
+      scad,
+    ];
+    // Debug: print full command line
+    const cmdline = [OPENSCAD_CMD, ...args.map(a => (a.includes(' ') ? `"${a}"` : a))].join(' ');
+    console.log('PNG cmd:', cmdline);
+    const child = spawn(OPENSCAD_CMD, args, { stdio: 'inherit' });
+    child.on('exit', (code) => {
+      if (code === 0) resolve(); else reject(new Error(`openscad exit ${code}`));
+    });
+    child.on('error', reject);
+  });
+}
+
 let building = new Set<string>();
 
 async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'failed'> {
   const stl = toStl(scad);
+  const pngs = PNG_VIEWS.map(v => ({ v, path: toPng(scad, v.name) }));
   const sStat = statSafe(scad);
   const tStat = statSafe(stl);
+  const pStats = pngs.map(p => ({ p, st: statSafe(p.path) }));
   if (!sStat) return 'failed';
-  if (tStat && tStat.mtimeMs >= sStat.mtimeMs) return 'skipped';
+  const needStl = !(tStat && tStat.mtimeMs >= sStat.mtimeMs);
+  const needPng = pStats.some(({ st }) => !(st && st.mtimeMs >= sStat.mtimeMs));
+  if (!needStl && !needPng) return 'skipped';
   if (building.has(scad)) return 'skipped';
 
   // output time change
   const fmt = (ms: number) => new Date(ms).toTimeString().slice(0, 8);
   const srcT = fmt(sStat.mtimeMs);
   const outT = tStat ? fmt(tStat.mtimeMs) : 'missing';
-  process.stdout.write(`mtime src ${srcT}, out ${outT}\n`);
+  process.stdout.write(`mtime src ${srcT}, stl ${outT}\n`);
 
   building.add(scad);
   process.stdout.write(`Rendering: ${path.relative(ROOT, scad)} -> ${path.relative(ROOT, stl)}\n`);
   try {
     fs.mkdirSync(path.dirname(stl), { recursive: true });
-    await render(scad, stl);
-    console.log(`Built: ${path.relative(ROOT, stl)}`);
+    if (needStl) {
+      await render(scad, stl);
+      console.log(`Built: ${path.relative(ROOT, stl)}`);
+    }
+    if (needPng) {
+      for (const { v, path: png } of pngs) {
+        const st = statSafe(png);
+        if (st && st.mtimeMs >= sStat.mtimeMs) continue;
+        fs.mkdirSync(path.dirname(png), { recursive: true });
+        console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
+        await renderPng(scad, png, v);
+      }
+    }
     return 'built';
   } catch (e) {
     console.error(`Error rendering ${scad}:`, (e as Error).message);
