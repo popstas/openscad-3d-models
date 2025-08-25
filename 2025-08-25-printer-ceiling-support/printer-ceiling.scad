@@ -19,8 +19,7 @@
 // left_wrap() / right_wrap() — вертикальные «обжимные» лапки: ширина wrap_w, высота вниз wrap_h,
 //                              толщина wrap_th; охватывают раму снаружи вдоль сторон Y и X.
 // wrap_tabs() — объединяет обе лапки (left_wrap и right_wrap).
-// add_supports(h, len) — опциональные косынки: вылет support_len, высота support_h,
-//                        толщина экструзии = post_th; включаются флагом supports.
+// (упрощено) Рёбра жёсткости и дополнительные косынки удалены из модели
 // clip_for_fragments() — при test_fragment=true выводит два укороченных фрагмента; окна клипа
 //                        задаются frag_size, frag_gap_x, frag_h_extra.
 
@@ -38,7 +37,6 @@ pin_fs = 0.25;  // чуть тоньше для штырей и отверсти
 // ----------------------------
 test_fragment = false; // true — печатать только укороченные фрагменты
 frag_size     = 50;    // размер квадрата вырезки, мм (для обрезки intersection)
-frag_index    = 0;     // 0=НЛ, 1=ВЛ, 2=НП, 3=ВП (необязательно)
 frag_gap_x    = 10;    // зазор между фрагментами по X, мм
 frag_h_extra  = 50;    // запас по высоте клипа, мм
 
@@ -46,10 +44,6 @@ frag_h_extra  = 50;    // запас по высоте клипа, мм
 // Фаски/скругления по краям
 // ----------------------------
 tiny = 0.1;                  // небольшой зазор для булевых операций
-edge_chamfer_z = 1;          // высота фаски по Z (мм)
-edge_chamfer_x = 5;          // горизонтальный вылет фаски по X (с каждой стороны), мм
-edge_chamfer_y = 5;          // горизонтальный вылет фаски по Y (с каждой стороны), мм
-screen_frame_gap = 0.2;      // совместимость с шаблонами; здесь не влияет
 
 // Скругления
 radius_r = 30;                 // общий радиус скруглений по 2D-контуром (мм)
@@ -70,25 +64,18 @@ post_h_full     = gap_total - (base_th + top_pad_th); //= 208
 
 // Горизонтальные лапки (на раму)
 arm_len_full    = 87;        // длина лапок от угла рамы (по X и по Y)
-arm_th          = base_th;   // толщина лапок = толщина нижней платформы
 // bottom_pad_r удалён — используем общий radius_r
 
 // Вертикальные лапки (обхват снаружи)
 wrap_h          = 15;        // высота вниз по Z (от 0 до -wrap_h)
 wrap_w          = frame_w;   // ширина вдоль ребра (по X или Y)
-wrap_y = post_y;
 wrap_th         = 2;         // толщина каждой вертикальной лапки (наружу, по X/Y)
 
 // Верхняя площадка
 pad_xy          = 30;        // 30x30 мм квадратная площадка сверху
 pad_y           = 2*post_y;  // ширина по Y верхней площадки (в 2 раза больше post_y)
-// Доп. сдвиг верхней площадки по X, чтобы точно начать от X=0 (тонкая подстройка)
-top_pad_off_x_extra = 0;     // мм (обычно 0; увеличьте, если визуально уходит в X<0)
 
-// Рёбра жёсткости
-supports        = true;      // флаг для добавления косынок/ребер
-support_len     = 28;        // вылет ребра от стойки (по X/Y)
-support_h       = 40;        // высота ребра по Z
+// (упрощено) блок параметров рёбер жёсткости удалён
 
 // ----------------------------
 // Значения для test_fragment
@@ -153,17 +140,6 @@ module L2D(len, w, r){
         }
 }
 
-// Четверть круга для скругления внутреннего угла на плоскости XY (у (0,0))
-module corner_fillet_xy(r, h){
-    linear_extrude(height=h)
-        intersection(){
-            square([r, r], center=false);
-            circle(r=r, $fs=pin_fs, $fa=6);
-        }
-}
-
-
-
 // Верхняя квадратная площадка (с полукругом справа и скруглением левого края)
 module top_pad(){
     translate([0, post_y, base_th + (test_fragment?post_h_tf:post_h_full)])
@@ -173,16 +149,15 @@ module top_pad(){
 
 // Вертикальная стойка (30 x 3, высота post_h)
 module post(h){
-    r_post = min(radius_r, post_th/2 - tiny, frame_w/2 - tiny);
-    r_fillet = min(radius_r, frame_w/2 - tiny);
-    translate([post_th/2, r_fillet, base_th])
+    // Прямоугольная стойка без скруглений, прижатая к внутреннему углу (minX=0, minY=0)
+    translate([0, post_y, base_th])
         linear_extrude(height=h)
-            rr2d([post_th, frame_w], r=r_post);
+            square([post_th, frame_w], center=false);
 }
 
 // Нижние горизонтальные лапки-"Г" (толщина base_th)
 module bottom_pad(len){
-    translate([radius_r/2, radius_r/2, 0])
+    translate([radius_r/2, post_y, 0])
         linear_extrude(height=base_th)
             L2D(len, frame_w, radius_r);
 }
@@ -191,7 +166,7 @@ module bottom_pad(len){
 module left_wrap(){
     r_corner = min(radius_r, frame_w/2 - tiny);
     // wrap_w = max(wrap_w + wrap_th, tiny); // уменьшить охват по Y на wrap_th
-    translate([wrap_th, wrap_w + r_corner - wrap_th, -wrap_h])
+    translate([wrap_th, post_y + wrap_w, -wrap_h])
         rotate([270,180,90])
             linear_extrude(height=wrap_th)
                 rr2d_round_minY([wrap_w, wrap_h], r=min(radius_r, wrap_w/2 - tiny, wrap_h/2 - tiny));
@@ -213,19 +188,7 @@ module wrap_tabs(){
 }
 
 // Опциональные рёбра жёсткости (две косынки вдоль X и Y)
-module add_supports(h, len){
-    if(supports){
-        // Косынка XZ, экструзия по Y = post_th
-        translate([0,0,base_th])
-            linear_extrude(height=post_th)
-                polygon(points=[[0,0],[len,0],[0,min(h, post_h_full)]]);
-        // Косынка YZ, экструзия по X = post_th (поворот)
-        translate([0,0,base_th])
-            rotate([0,0,90])
-                linear_extrude(height=post_th)
-                    polygon(points=[[0,0],[len,0],[0,min(h, post_h_full)]]);
-    }
-}
+// (упрощено) add_supports удалён — не используется
 
 // Полная сборка модели
 module base(){
@@ -237,9 +200,7 @@ module base(){
         post(h);
         bottom_pad(len);
         wrap_tabs();
-        // Скругление в месте стыка стойки и нижней площадки
-        // corner_fillet_xy(min(radius_r, frame_w/2 - tiny), base_th);
-        // add_supports(support_len, support_h);
+        // (упрощено) дополнительные скругления и рёбра убраны
     }
 }
 
