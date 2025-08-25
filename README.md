@@ -19,6 +19,26 @@ A collection of small, self‑contained OpenSCAD models organized by date and sl
 - `compile-stl.sh` — rebuilds `.stl` when `.scad` is newer
 - `AGENTS.md` — contributor guidelines
 
+## Environment (.env)
+- __Purpose__: Configure the OpenSCAD binary used by `compile-stl.sh`.
+- __Setup__: Copy `.env.example` to `.env` and set `openscad_path`.
+
+Example `.env`:
+```
+openscad_path=C:/Program Files/OpenSCAD/openscad.exe
+# macOS example:
+# openscad_path=/Applications/OpenSCAD-2021.1.app/Contents/MacOS/openscad
+```
+
+- __Windows notes__:
+  - Do not add quotes. Use either forward slashes `C:/...` or plain Windows paths with spaces (quotes are not needed).
+  - The script prints which binary it will use: `Using OpenSCAD: ...`.
+- __Override without .env__: set `OPENSCAD_CMD` for a one-off run, e.g.
+  ```bash
+  OPENSCAD_CMD="C:/Program Files/OpenSCAD/openscad.exe" ./compile-stl.sh
+  ```
+- __Git__: `.env` is ignored by Git (see `.gitignore`).
+
 ## Conventions
 - Units: millimeters. Use clear parameter names (e.g., `wall_mm`).
 - Style: 2‑space indent, `snake_case` for variables/modules, constants in `UPPER_SNAKE`.
