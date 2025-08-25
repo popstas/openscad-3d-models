@@ -11,8 +11,8 @@ function toStl(scadPath: string): string {
   return scadPath.replace(/\.scad$/i, '.stl');
 }
 
-function toPng(scadPath: string, view: '0' | '1' | '2'): string {
-  return scadPath.replace(/\.scad$/i, `.${view}.png`);
+function toPng(scadPath: string, view: string): string {
+  return scadPath.replace(/\.scad$/i, `.preview.${view}.png`);
 }
 
 function statSafe(p: string): fs.Stats | null {
@@ -47,12 +47,14 @@ function render(scad: string, stl: string): Promise<void> {
   });
 }
 
-type CamView = { name: '0' | '1' | '2'; camera: string; projection: 'o' | 'p' };
+type CamView = { name: string; camera: string; projection: 'o' | 'p' };
 const PNG_VIEWS: CamView[] = [
   // --camera = tx,ty,tz,rx,ry,rz,dist ; --viewall will frame the model
-  { name: '0',     camera: '0,0,0,55,0,25,500',  projection: 'p' },
-  { name: '1',   camera: '0,0,0,0,0,0,500',    projection: 'o' },
-  { name: '2', camera: '0,0,0,90,0,0,500',   projection: 'p' },
+  // Names encode plane + projection: xy-o (orthographic XY top), xz-p (perspective XZ), iso-p (isometric-like perspective)
+  { name: 'iso-p', camera: '0,0,0,55,0,25,500', projection: 'p' },
+  { name: 'xy-o',  camera: '0,0,0,0,0,0,500',   projection: 'o' },
+  { name: 'xz-p',  camera: '0,0,0,90,0,0,500',  projection: 'p' },
+  { name: 'yz-p',  camera: '0,0,0,0,90,0,500',  projection: 'p' },
 ];
 
 function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
@@ -65,6 +67,7 @@ function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
       '--render',
       '--viewall',
       '--autocenter',
+      '--view=axes',
       scad,
     ];
     // Debug: print full command line

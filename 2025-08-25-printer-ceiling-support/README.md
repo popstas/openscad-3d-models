@@ -91,8 +91,10 @@ MIT
 
 ## Превью
 
-![printer-ceiling 0](printer-ceiling.0.png)
+![printer-ceiling iso-p](printer-ceiling.preview.iso-p.png)
 
-![printer-ceiling 1](printer-ceiling.1.png)
+![printer-ceiling xy-o](printer-ceiling.preview.xy-o.png)
 
-![printer-ceiling 2](printer-ceiling.2.png)
+![printer-ceiling xz-p](printer-ceiling.preview.xz-p.png)
+
+![printer-ceiling xy-p](printer-ceiling.preview.xy-p.png)

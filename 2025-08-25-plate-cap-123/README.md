@@ -17,8 +17,10 @@
 
 ## Превью
 
-![plate-cap 0](plate-cap-123.0.png)
+![plate-cap iso-p](plate-cap-123.preview.iso-p.png)
 
-![plate-cap 1](plate-cap-123.1.png)
+![plate-cap xy-o](plate-cap-123.preview.xy-o.png)
 
-![plate-cap 2](plate-cap-123.2.png)
+![plate-cap xz-p](plate-cap-123.preview.xz-p.png)
+
+![plate-cap xy-p](plate-cap-123.preview.xy-p.png)
