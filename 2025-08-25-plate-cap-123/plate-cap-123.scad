@@ -1,0 +1,115 @@
+// =============================================
+// 3D: Circular Plate Cap Ø123.6 (shell 1 mm, height 5 mm)
+// Version: 1.0
+// Author: ChatGPT (OpenSCAD)
+// =============================================
+
+// ----------------------------
+// Настройка точности
+// ----------------------------
+$fn = 0;        // фиксированную сегментацию отключаем
+$fa = 6;        // 5–8° обычно достаточно
+$fs = 0.35;     // ≈ диаметр сопла (0.3–0.5 для сопла 0.4)
+pin_fs = 0.25;  // чуть тоньше для штырей и отверстий
+
+// ----------------------------
+// Тестовые фрагменты (стандартный блок)
+// ----------------------------
+test_fragment = false; // true — печатать только укороченные фрагменты (base)
+frag_size     = 20;    // размер квадрата вырезки, мм
+frag_index    = 0;     // 0=НЛ, 1=ВЛ, 2=НП, 3=ВП (относительно основания)
+frag_gap_x    = 10;    // зазор между фрагментами по X, мм
+frag_h_extra  = 20;    // запас по высоте клипа, мм
+
+// ----------------------------
+// Фаски/скругления по краям
+// ----------------------------
+tiny = 0.1;                  // небольшой зазор для булевых операций
+edge_chamfer_z = 0.8;        // высота фаски по Z (мм) для верхнего края
+edge_chamfer_x = 0;          // совместимость с шаблонами
+edge_chamfer_y = 0;          // совместимость с шаблонами
+screen_frame_gap = 0.2;      // совместимость
+
+// Скругления
+radius_r = 1.5;              // целевой радиус округлений (1–2 мм по ТЗ)
+
+// ----------------------------
+// Параметры модели (все размеры в мм)
+// ----------------------------
+cap_inner_d     = 123.6;   // внутренний диаметр колпака (посадка)
+wall_th         = 1.0;     // толщина стенки (радиальная)
+top_th          = 1.0;     // толщина крышки сверху
+cap_height      = 5.0;     // общая наружная высота колпака
+fit_extra_inner = 0.20;    // технологический запас внутрь (увеличение внутреннего Ø)
+
+// Вычисляемые размеры
+cap_inner_d_eff = cap_inner_d + 2*fit_extra_inner; // реальный внутренний Ø для печати
+cap_outer_d     = cap_inner_d_eff + 2*wall_th;     // наружный Ø
+skirt_h         = max(cap_height - top_th, tiny);  // высота юбки (без верхней крышки)
+
+// ----------------------------
+// Комментарии по устройству модели
+// ----------------------------
+// Фрагменты:
+// - base: полный колпак — круглая крышка толщиной top_th + цилиндрическая юбка высотой skirt_h
+// - Внутренний паз формируется разницей цилиндров (контроль посадки через fit_extra_inner)
+// - Наружный диск БЕЗ скругления кромок (по просьбе)
+
+// ----------------------------
+// Вспомогательные функции/модули
+// ----------------------------
+module round_chamfer_ring(d_outer, d_inner, h, chamfer){
+    h_ch = min(chamfer, h/2);
+    difference(){
+        cylinder(h=h - h_ch, d=d_outer);
+        translate([0,0,0]) cylinder(h=h - h_ch + tiny, d=d_inner);
+    }
+    difference(){
+        translate([0,0,h - h_ch]) cylinder(h=h_ch, d1=d_outer, d2=max(d_outer - 2*h_ch, tiny));
+        translate([0,0,h - h_ch]) cylinder(h=h_ch + tiny, d1=d_inner, d2=max(d_inner + 2*h_ch, tiny));
+    }
+}
+
+module cap_body(){
+    union(){
+        // Плоский диск без скругления
+        cylinder(h=top_th, d=cap_outer_d);
+        // Юбка с мягким переходом сверху
+        translate([0,0,0])
+            round_chamfer_ring(d_outer=cap_outer_d, d_inner=cap_inner_d_eff, h=skirt_h, chamfer=radius_r);
+    }
+}
+
+// ----------------------------
+// Основная деталь
+// ----------------------------
+module base(){
+    cap_body();
+}
+
+// ---------------
+// Клиппер фрагментов
+// ---------------
+module clip_for_fragments(){
+    if(test_fragment){
+        translate([0,0,0])
+            intersection(){
+                children();
+                translate([-frag_size/2, -frag_size/2, -frag_h_extra])
+                    cube([frag_size, frag_size, cap_height + 2*frag_h_extra], center=false);
+            }
+        translate([cap_outer_d/2 + frag_gap_x + frag_size/2, 0, 0])
+            intersection(){
+                children();
+                translate([-frag_size/2, -frag_size/2, cap_height/2])
+                    cube([frag_size, frag_size, cap_height], center=false);
+            }
+    }else{
+        children();
+    }
+}
+
+// ----------------------------
+// ВЫВОД МОДЕЛИ
+// ----------------------------
+clip_for_fragments() base();

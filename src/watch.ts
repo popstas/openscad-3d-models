@@ -52,7 +52,7 @@ const PNG_VIEWS: CamView[] = [
   // --camera = tx,ty,tz,rx,ry,rz,dist ; --viewall will frame the model
   { name: '0',     camera: '0,0,0,55,0,25,500',  projection: 'p' },
   { name: '1',   camera: '0,0,0,0,0,0,500',    projection: 'o' },
-  { name: '2', camera: '0,0,0,0,0,90,500',   projection: 'o' },
+  { name: '2', camera: '0,0,0,90,0,0,500',   projection: 'p' },
 ];
 
 function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
