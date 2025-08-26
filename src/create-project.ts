@@ -53,7 +53,7 @@ function main() {
   const date = todayStamp();
   const folder = `${date}-${longSlug}`;
   const root = process.cwd();
-  const modelDir = path.join(root, folder);
+  const modelDir = path.join(root, 'models', folder);
   ensureDir(modelDir);
 
   const scadName = `${shortSlug}.scad`;
