@@ -372,10 +372,12 @@ function renderModelsTable(models: ModelMeta[]): string {
     const date = dateMatch ? dateMatch[0] : '';
     const dirLink = folder ? `[${folder}](${folder}/)` : '';
     const fileLink = file ? `[${file}](${url})` : '';
-    const infoCell = `<strong>${m.name}</strong><br>${date}<br>${dirLink}<br>${fileLink}`;
+    const infoCell = `${m.name}<br>${date}<br>${dirLink}<br>${fileLink}`;
     const p1 = m.previews[0] ? `![${m.previews[0].name}](${m.previews[0].rel.replace('models/', '')})` : '—';
     const p2 = m.previews[1] ? `![${m.previews[1].name}](${m.previews[1].rel.replace('models/', '')})` : '—';
-    lines.push(`| ${infoCell} | ${p1} | ${p2} |`);
+    const p3 = m.previews[2] ? `![${m.previews[2].name}](${m.previews[2].rel.replace('models/', '')})` : '—';
+    const p4 = m.previews[3] ? `![${m.previews[3].name}](${m.previews[3].rel.replace('models/', '')})` : '—';
+    lines.push(`| ${infoCell} | ${p1} ${p2} | ${p3} ${p4} |`);
   }
   lines.push('');
   return lines.join('\n');
