@@ -85,6 +85,50 @@ function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
   });
 }
 
+// Strip PNG metadata to ensure deterministic PNGs.
+// Keeps only critical chunks (IHDR, PLTE, IDAT, IEND) and tRNS (transparency).
+// Drops ancillary chunks like tEXt/iTXt/zTXt, tIME, pHYs, sRGB, gAMA, cHRM, eXIf, iCCP, etc.
+function stripPngMetadata(pngPath: string): void {
+  let buf: Buffer;
+  try { buf = fs.readFileSync(pngPath); } catch { return; }
+  // PNG signature
+  const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (buf.length < 8 || !buf.slice(0, 8).equals(SIG)) return;
+
+  const outParts: Buffer[] = [SIG];
+  let off = 8;
+  let changed = false;
+  while (off + 12 <= buf.length) {
+    const len = buf.readUInt32BE(off);
+    const type = buf.slice(off + 4, off + 8);
+    const chunkStart = off;
+    const dataStart = off + 8;
+    const dataEnd = dataStart + len;
+    const crcEnd = dataEnd + 4;
+    if (crcEnd > buf.length) break; // malformed
+
+    const typeStr = type.toString('ascii');
+    // Criticality is determined by first letter uppercase. Keep critical and tRNS.
+    const isCritical = typeStr[0] === typeStr[0]?.toUpperCase();
+    const keep = isCritical || typeStr === 'tRNS';
+
+    if (keep) {
+      outParts.push(buf.slice(chunkStart, crcEnd));
+    } else {
+      changed = true; // we are dropping a chunk
+    }
+
+    // IEND marks the end; stop afterwards to avoid junk
+    if (typeStr === 'IEND') break;
+    off = crcEnd;
+  }
+
+  const outBuf = Buffer.concat(outParts);
+  if (changed && !outBuf.equals(buf)) {
+    try { fs.writeFileSync(pngPath, outBuf); } catch {}
+  }
+}
+
 let building = new Set<string>();
 
 async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'failed'> {
@@ -120,6 +164,8 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
         fs.mkdirSync(path.dirname(png), { recursive: true });
         console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
         await renderPng(scad, png, v);
+        // Post-process: strip metadata for determinism
+        stripPngMetadata(png);
       }
     }
     return 'built';
@@ -318,8 +364,8 @@ function renderModelsTable(models: ModelMeta[]): string {
   lines.push('| Name | URL | Description | Previews |');
   lines.push('| ---- | --- | ----------- | -------- |');
   for (const m of models) {
-    const url = m.scadRel;
-    const previews = m.previews.map(p => `![${p.name}](${p.rel})`).join(' ');
+    const url = m.scadRel.replace('models/', '');
+    const previews = m.previews.map(p => `![${p.name}](${p.rel.replace('models/', '')})`).join(' ');
     lines.push(`| ${m.name} | [${url}](${url}) | ${m.description} | ${previews} |`);
   }
   lines.push('');
