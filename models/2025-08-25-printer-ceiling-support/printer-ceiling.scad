@@ -7,6 +7,9 @@
 // Short description for models table
 description = "Ceiling Corner Support for Printer Frame";
 
+// Shared library
+use <../modules.scad>
+
 // ----------------------------
 // Описание модулей (фрагментов)
 // ----------------------------
@@ -47,7 +50,6 @@ frag_h_extra  = 50;    // запас по высоте клипа, мм
 // ----------------------------
 // Фаски/скругления по краям
 // ----------------------------
-tiny = 0.1;                  // небольшой зазор для булевых операций
 
 // Скругления
 radius_r = 30;                 // общий радиус скруглений по 2D-контуром (мм)
@@ -91,23 +93,15 @@ post_h_tf       = height_tf_total - (base_th + top_pad_th); // укорочен�
 // ----------------------------
 // Вспомогательные функции/модули
 // ----------------------------
-// 2D-скруглённый прямоугольник заданного размера (внешний габарит size=[x,y])
-module rr2d(size=[10,10], r=2){
-    sx = size[0]; sy = size[1];
-    // стартовая внутренняя заготовка меньше на 2*r, затем offset(r)
-    offset(r=r)
-        square([max(sx-2*r, tiny), max(sy-2*r, tiny)], center=false);
-}
-
 // 2D-прямоугольник с закруглением ТОЛЬКО на стороне minY (низу)
 module rr2d_round_minY(size=[10,10], r=2){
     w = size[0]; h = size[1];
-    r2 = min(r, w/2 - tiny, h/2 - tiny);
+    r2 = min(r, w/2 - eps(), h/2 - eps());
     union(){
         // Верхняя часть без скруглений
-        translate([0, r2]) square([w, max(h - r2, tiny)], center=false);
+        translate([0, r2]) square([w, max(h - r2, eps())], center=false);
         // Нижняя перемычка между кругами
-        translate([r2, 0]) square([max(w - 2*r2, tiny), r2], center=false);
+        translate([r2, 0]) square([max(w - 2*r2, eps()), r2], center=false);
         // Кварткруги снизу слева и справа
         translate([r2, r2]) circle(r=r2);
         translate([w - r2, r2]) circle(r=r2);
@@ -118,7 +112,7 @@ module rr2d_round_minY(size=[10,10], r=2){
 module rr2d_round_minX(size=[10,10], r=2){
     // Скругление только на стороне ПРАВАЯ (maxX); minX остаётся прямой
     w = size[0]; h = size[1];
-    r2 = min(r, w/2 - tiny, h/2 - tiny);
+    r2 = min(r, w/2 - eps(), h/2 - eps());
     union(){
         // Основной прямоугольник по всей ширине без скругления слева
         square([w - r2, h], center=false);
@@ -126,16 +120,16 @@ module rr2d_round_minX(size=[10,10], r=2){
         translate([w - r2, r2]) circle(r=r2, $fs=pin_fs, $fa=6);
         translate([w - r2, h - r2]) circle(r=r2, $fs=pin_fs, $fa=6);
         // Вертикальная перемычка между четвертями
-        translate([w - r2, r2]) square([r2, max(h - 2*r2, tiny)], center=false);
+        translate([w - r2, r2]) square([r2, max(h - 2*r2, eps())], center=false);
     }
 }
 
 // 2D-скруглённая L-форма: две полосы шириной w и длиной len, сходящиеся в углу (0,0)
 module L2D(len, w, r){
     // Скругляем внешние углы без увеличения общей толщины w.
-    r_eff = min(r, w/2 - tiny, len/2 - tiny);
-    inner_len = max(len - 2*r_eff, tiny);
-    inner_w   = max(w   - 2*r_eff, tiny);
+    r_eff = min(r, w/2 - eps(), len/2 - eps());
+    inner_len = max(len - 2*r_eff, eps());
+    inner_w   = max(w   - 2*r_eff, eps());
     // Основная L-форма со скруглёнными внешними кромками
     offset(r=r_eff)
         union(){
@@ -168,21 +162,21 @@ module bottom_pad(len){
 
 // Левая лапка (обхват по Y-стороне)
 module left_wrap(){
-    r_corner = min(radius_r, frame_w/2 - tiny);
+    r_corner = min(radius_r, frame_w/2 - eps());
     // wrap_w = max(wrap_w + wrap_th, tiny); // уменьшить охват по Y на wrap_th
     translate([wrap_th, post_y + wrap_w, -wrap_h])
         rotate([270,180,90])
             linear_extrude(height=wrap_th)
-                rr2d_round_minY([wrap_w, wrap_h], r=min(radius_r, wrap_w/2 - tiny, wrap_h/2 - tiny));
+                rr2d_round_minY([wrap_w, wrap_h], r=min(radius_r, wrap_w/2 - eps(), wrap_h/2 - eps()));
 }
 
 // Правая лапка (обхват по X-стороне)
 module right_wrap(){
-    r_corner = min(radius_r, frame_w/2 - tiny);
+    r_corner = min(radius_r, frame_w/2 - eps());
     translate([frame_w + r_corner, 0, 0])
-        rotate([0,90,90])
+        rotate([0,90,90])            
             linear_extrude(height=wrap_th)
-                rr2d_round_minX([wrap_h, wrap_w + wrap_th], r=min(radius_r, (wrap_w + wrap_th)/2 - tiny, wrap_h/2 - tiny));
+                rr2d_round_minX([wrap_h, wrap_w + wrap_th], r=min(radius_r, (wrap_w + wrap_th)/2 - eps(), wrap_h/2 - eps()));
 }
 
 // Совместимость: собрать обе лапки

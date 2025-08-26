@@ -6,6 +6,9 @@
 
 // ----------------------------
 description = "Horizontal Holder for 4 Bottles (130x30)";
+
+// Shared library
+use <../modules.scad>
 // ----------------------------
 // Настройка точности
 // ----------------------------
@@ -26,7 +29,6 @@ frag_h_extra  = 12;     // запас по высоте клипа, мм
 // ----------------------------
 // Зазоры/фаски (совместимость)
 // ----------------------------
-tiny = 0.1;
 edge_chamfer_z = 0;      // не используем, но оставим для совместимости
 edge_chamfer_x = 0;
 edge_chamfer_y = 0;
@@ -145,15 +147,15 @@ module clip_for_fragments(){
         // Фрагмент у левого торца
         intersection(){
             children();
-            translate([-tiny, -tiny, -frag_h_extra])
-                cube([frag_size, tot_w + 2*tiny, rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
+            translate([-eps(), -eps(), -frag_h_extra])
+                cube([frag_size, tot_w + 2*eps(), rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
         }
         // Фрагмент у правого торца
         translate([frag_size + frag_gap_x, 0, 0])
             intersection(){
                 children();
-                translate([tot_l - frag_size, -tiny, -frag_h_extra])
-                    cube([frag_size + tiny, tot_w + 2*tiny, rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
+                translate([tot_l - frag_size, -eps(), -frag_h_extra])
+                    cube([frag_size + eps(), tot_w + 2*eps(), rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
             }
     }else{
         children();

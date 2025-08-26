@@ -6,6 +6,9 @@
 // Short description for models table
 description = "Две детали: основание со стойками и штырями, и рамка с окном под экран";
 
+// Shared library
+use <../modules.scad>
+
 // ===== Точность аппроксимации окружностей =====
 $v = "1.7"; // Версия модели
 $fn = 0;        // фикс. сегментация отключена
@@ -34,7 +37,6 @@ print_base  = true;     // печатать основание
 print_frame = true;     // печатать рамку
 
 // ===== Общие доп. параметры =====
-tiny = 0.1;                  // небольшой зазор для булевых операций
 edge_chamfer_z = 4;       // высота фаски по Z (мм) - убрана фаска
 edge_chamfer_x = 1.6;       // горизонтальный вылет фаски по X (с каждой стороны), мм - убрана фаска
 edge_chamfer_y = 1.6;       // горизонтальный вылет фаски по Y (с каждой стороны), мм - убрана фаска
@@ -104,7 +106,7 @@ open_off_y = (base_height - open_height)/2;   // (Y)
 // ===== Вспомогательное =====
 function clamp(val, lo, hi) = max(lo, min(val, hi));
 function clamp_chz(t, chz) = clamp(chz, 0, t/2);
-function clamp_chxy(l,w,chx,chy) = [clamp(chx, 0, l/2 - tiny), clamp(chy, 0, w/2 - tiny)];
+function clamp_chxy(l,w,chx,chy) = [clamp(chx, 0, l/2 - eps()), clamp(chy, 0, w/2 - eps())];
 
 // Пластина с фаской ТОЛЬКО СНИЗУ по внешнему периметру (симметрично по всем сторонам)
 module chamfered_plate_bottom_edges_sym(l,w,t,chz,chx,chy){
@@ -147,12 +149,12 @@ module screenFrame(){
     difference(){
         color("silver") chamfered_plate_bottom_edges_sym(base_width, base_height, frame_thickness, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
         // окно под экран (сквозное). ВЫСОТА с учётом screen_frame_gap, НО XY не трогаем
-        translate([open_off_x, open_off_y, -tiny])
-            cube([open_width, open_height, frame_thickness + screen_frame_gap + 2*tiny]);
+        translate([open_off_x, open_off_y, -eps()])
+            cube([open_width, open_height, frame_thickness + screen_frame_gap + 2*eps()]);
         // отверстия под штыри
         for (pos = hole_positions)
-            translate([pos[0], pos[1], -tiny])
-                cylinder(h=frame_thickness + screen_frame_gap + 2*tiny, d=pin_diam + 0.2, $fs=pin_fs, $fa=$fa);
+            translate([pos[0], pos[1], -eps()])
+                cylinder(h=frame_thickness + screen_frame_gap + 2*eps(), d=pin_diam + 0.2, $fs=pin_fs, $fa=$fa);
     }
 }
 
