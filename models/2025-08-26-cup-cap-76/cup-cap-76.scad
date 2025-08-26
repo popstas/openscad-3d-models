@@ -3,6 +3,7 @@
 // Version: 1.0
 // Author: ChatGPT (OpenSCAD)
 // =============================================
+use <../modules.scad>;
 
 // ----------------------------
 // Настройка точности
@@ -55,21 +56,6 @@ skirt_h         = max(cap_height - top_th, tiny);  // высота юбки (б�
 // - base: полный колпак — круглая крышка толщиной top_th + цилиндрическая юбка высотой skirt_h
 // - Внутренний паз формируется разницей цилиндров (контроль посадки через fit_extra_inner)
 // - Наружный диск БЕЗ скругления кромок (по просьбе)
-
-// ----------------------------
-// Вспомогательные функции/модули
-// ----------------------------
-module round_chamfer_ring(d_outer, d_inner, h, chamfer){
-    h_ch = min(chamfer, h/2);
-    difference(){
-        cylinder(h=h - h_ch, d=d_outer);
-        translate([0,0,0]) cylinder(h=h - h_ch + tiny, d=d_inner);
-    }
-    difference(){
-        translate([0,0,h - h_ch]) cylinder(h=h_ch, d1=d_outer, d2=max(d_outer - 2*h_ch, tiny));
-        translate([0,0,h - h_ch]) cylinder(h=h_ch + tiny, d1=d_inner, d2=max(d_inner + 2*h_ch, tiny));
-    }
-}
 
 module cap_body(){
     union(){

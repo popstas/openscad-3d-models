@@ -3,6 +3,7 @@
 // Version: 1.0
 // Author: ChatGPT (OpenSCAD)
 // =============================================
+use <../modules.scad>;
 
 // Short description for models table
 description = "Mic Transceiver Box — inner 100x35x17, base + cap";
@@ -85,21 +86,8 @@ cap_h = cap_top_th + cap_lip_h;
 // ----------------------------
 // Вспомогательные функции/модули
 // ----------------------------
-function clamp(val, lo, hi) = max(lo, min(val, hi));
-function clamp_chz(t, chz) = clamp(chz, 0, t/2);
-function clamp_chxy(l,w,chx,chy) = [clamp(chx, 0, l/2 - tiny), clamp(chy, 0, w/2 - tiny)];
 
 // 2D скруглённый прямоугольник внешнего размера size=[x,y]
-module rr2d(size=[10,10], r=2){
-    sx = size[0]; sy = size[1];
-    offset(r=r)
-        square([max(sx-2*r, tiny), max(sy-2*r, tiny)], center=false);
-}
-
-module rr2d_centered(size=[10,10], r=2){
-    sx = size[0]; sy = size[1];
-    translate([-sx/2, -sy/2]) rr2d(size, r);
-}
 
 // Экструзия скруглённого прямоугольника с фаской снизу (симметрия по X/Y)
 module chamfered_rr_bottom_edges_sym(size=[10,10], r=2, h=5, chz=0.8, chx=0.8, chy=0.8){
@@ -110,18 +98,18 @@ module chamfered_rr_bottom_edges_sym(size=[10,10], r=2, h=5, chz=0.8, chx=0.8, c
     chy2 = chxy[1];
 
     if (chz2 <= 0 || (chx2 <= 0 && chy2 <= 0)) {
-        linear_extrude(height=h) rr2d([sx, sy], r);
+        linear_extrude(height=h) rounded_rect([sx, sy], r);
     } else {
         union(){
             // верхнее тело
             translate([0,0,chz2])
                 linear_extrude(height=h - chz2)
-                    rr2d([sx, sy], r);
+                    rounded_rect([sx, sy], r);
             // нижняя фаска (аппрокс. масштабом из центра)
             //r2 = max(r - min(chx2, chy2), tiny);
             //translate([sx/2, sy/2, 0])
             //    linear_extrude(height=chz2, scale=[sx/max(sx - 2*chx2, tiny), sy/max(sy - 2*chy2, tiny)])
-            //        rr2d_centered([max(sx - 2*chx2, tiny), max(sy - 2*chy2, tiny)], r2);
+            //        rounded_rect([max(sx - 2*chx2, tiny), max(sy - 2*chy2, tiny)], r2);
         }
     }
 }
@@ -136,7 +124,7 @@ module base_body(){
         // внутренняя полость
         translate([0,0,bottom_th - tiny])
             linear_extrude(height=inner_h + 2*tiny)
-                rr2d([inner_x, inner_y], base_inner_r);
+                rounded_rect([inner_x, inner_y], base_inner_r);
     }
 }
 
@@ -147,7 +135,7 @@ module cap_shell(){
         // внутренняя полость на глубину борта
         translate([0,0,0])
             linear_extrude(height=cap_lip_h + tiny)
-                rr2d([cap_inner_x, cap_inner_y], cap_inner_r);
+                rounded_rect([cap_inner_x, cap_inner_y], cap_inner_r);
     }
 }
 

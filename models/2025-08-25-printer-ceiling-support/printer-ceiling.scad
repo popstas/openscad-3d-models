@@ -3,6 +3,7 @@
 // Version: 1.1
 // Author: ChatGPT (OpenSCAD)
 // =============================================
+use <../modules.scad>;
 
 // Short description for models table
 description = "Ceiling Corner Support for Printer Frame";
@@ -92,14 +93,6 @@ post_h_tf       = height_tf_total - (base_th + top_pad_th); // укорочен�
 // Вспомогательные функции/модули
 // ----------------------------
 // 2D-скруглённый прямоугольник заданного размера (внешний габарит size=[x,y])
-module rr2d(size=[10,10], r=2){
-    sx = size[0]; sy = size[1];
-    // стартовая внутренняя заготовка меньше на 2*r, затем offset(r)
-    offset(r=r)
-        square([max(sx-2*r, tiny), max(sy-2*r, tiny)], center=false);
-}
-
-// 2D-прямоугольник с закруглением ТОЛЬКО на стороне minY (низу)
 module rr2d_round_minY(size=[10,10], r=2){
     w = size[0]; h = size[1];
     r2 = min(r, w/2 - tiny, h/2 - tiny);

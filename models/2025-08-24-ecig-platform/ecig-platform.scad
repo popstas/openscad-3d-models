@@ -1,4 +1,5 @@
 // MODEL_VERSION = "v1.3.1"  // обновляйте номер при изменениях
+use <../modules.scad>;
 
 // Short description for models table
 description = "ECig platform stand with oval cup";
@@ -71,14 +72,6 @@ edge_chamfer_y = 1.5;  // «вылет» фаски по Y (на сторону)
 */
 
 // ====================== Вспомогательные 2D ====================
-module rounded_rect2d(w, h, r) {
-    r2 = min(r, min(w, h)/2);
-    minkowski() {
-        square([max(w - 2*r2, tiny), max(h - 2*r2, tiny)], center=true);
-        circle(r=r2);
-    }
-}
-
 // Анизотропный скруглённый прямоугольник (разные радиусы по X/Y)
 module rounded_rect2d_aniso(w, h, rx, ry) {
     rx2 = min(rx, w/2);

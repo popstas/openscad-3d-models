@@ -3,6 +3,7 @@
 // Version: 1.0
 // Author: ChatGPT (OpenSCAD)
 // =============================================
+use <../modules.scad>;
 
 // ----------------------------
 description = "Horizontal Holder for 4 Bottles (130x30)";

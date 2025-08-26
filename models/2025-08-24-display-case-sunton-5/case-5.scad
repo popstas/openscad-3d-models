@@ -2,6 +2,7 @@
 // Версия: v1.7 — анизотропная фаска снизу: независимые размеры по Z и по горизонтали (X/Y);
 // добавлен режим тест‑фрагментов и echo-контроль полей до кромки.
 // добавлен режим тест‑фрагментов и echo-контроль полей до кромки.
+use <../modules.scad>;
 
 // Short description for models table
 description = "Две детали: основание со стойками и штырями, и рамка с окном под экран";
@@ -100,11 +101,6 @@ open_width = screen_width + 2*window_clearance_y; // X
 open_height = screen_height  + 2*window_clearance_x; // Y
 open_off_x = (base_width  - open_width)/2;   // одинаково для base и frame (X)
 open_off_y = (base_height - open_height)/2;   // (Y)
-
-// ===== Вспомогательное =====
-function clamp(val, lo, hi) = max(lo, min(val, hi));
-function clamp_chz(t, chz) = clamp(chz, 0, t/2);
-function clamp_chxy(l,w,chx,chy) = [clamp(chx, 0, l/2 - tiny), clamp(chy, 0, w/2 - tiny)];
 
 // Пластина с фаской ТОЛЬКО СНИЗУ по внешнему периметру (симметрично по всем сторонам)
 module chamfered_plate_bottom_edges_sym(l,w,t,chz,chx,chy){
