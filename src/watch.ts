@@ -1,6 +1,9 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
+import { PNG } from 'pngjs';
+import Bluebird from 'bluebird';
 
 const ROOT = process.cwd();
 const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'openscad';
@@ -40,8 +43,8 @@ function listScadFiles(dir: string): string[] {
   return out;
 }
 
-function render(scad: string, stl: string): Promise<void> {
-  return new Promise((resolve, reject) => {
+async function render(scad: string, stl: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
     const args = ['-o', stl, scad];
     const child = spawn(OPENSCAD_CMD, args, { stdio: 'inherit' });
     child.on('exit', (code) => {
@@ -85,53 +88,46 @@ function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
   });
 }
 
-// Strip PNG metadata to ensure deterministic PNGs.
-// Keeps only critical chunks (IHDR, PLTE, IDAT, IEND) and tRNS (transparency).
-// Drops ancillary chunks like tEXt/iTXt/zTXt, tIME, pHYs, sRGB, gAMA, cHRM, eXIf, iCCP, etc.
-function stripPngMetadata(pngPath: string): void {
+// Re-encode PNG with no filtering and fixed Huffman strategy for deterministic output
+function normalizePng(pngPath: string): void {
   let buf: Buffer;
   try { buf = fs.readFileSync(pngPath); } catch { return; }
-  // PNG signature
-  const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  if (buf.length < 8 || !buf.slice(0, 8).equals(SIG)) return;
-
-  const outParts: Buffer[] = [SIG];
-  let off = 8;
-  let changed = false;
-  while (off + 12 <= buf.length) {
-    const len = buf.readUInt32BE(off);
-    const type = buf.slice(off + 4, off + 8);
-    const chunkStart = off;
-    const dataStart = off + 8;
-    const dataEnd = dataStart + len;
-    const crcEnd = dataEnd + 4;
-    if (crcEnd > buf.length) break; // malformed
-
-    const typeStr = type.toString('ascii');
-    // Criticality is determined by first letter uppercase. Keep critical and tRNS.
-    const isCritical = typeStr[0] === typeStr[0]?.toUpperCase();
-    const keep = isCritical || typeStr === 'tRNS';
-
-    if (keep) {
-      outParts.push(buf.slice(chunkStart, crcEnd));
-    } else {
-      changed = true; // we are dropping a chunk
-    }
-
-    // IEND marks the end; stop afterwards to avoid junk
-    if (typeStr === 'IEND') break;
-    off = crcEnd;
+  try {
+    const img = PNG.sync.read(buf);
+    const colorType = (img as any).colorType ?? 6;
+    const bitDepth = (img as any).depth ?? 8;
+    const out = new PNG({
+      width: img.width,
+      height: img.height,
+      colorType,
+      bitDepth,
+      filterType: 0,
+    });
+    img.data.copy(out.data);
+    const outBuf = PNG.sync.write(out, {
+      filterType: 0,
+      colorType,
+      bitDepth,
+      deflateLevel: 9,
+      deflateStrategy: zlib.constants.Z_FIXED,
+    });
+    if (!outBuf.equals(buf)) fs.writeFileSync(pngPath, outBuf);
+  } catch {
+    // ignore malformed images
   }
+}
 
-  const outBuf = Buffer.concat(outParts);
-  if (changed && !outBuf.equals(buf)) {
-    try { fs.writeFileSync(pngPath, outBuf); } catch {}
-  }
+// Helper: render PNG and normalize it for deterministic output
+async function renderPngWithNormalize(scad: string, png: string, cam: CamView): Promise<void> {
+  await renderPng(scad, png, cam);
+  // Post-process: re-encode for deterministic output
+  normalizePng(png);
 }
 
 let building = new Set<string>();
 
 async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'failed'> {
+  if (scad.toLowerCase().endsWith('modules.scad')) return 'skipped';
   const stl = toStl(scad);
   const pngs = PNG_VIEWS.map(v => ({ v, path: toPng(scad, v.name) }));
   const sStat = statSafe(scad);
@@ -163,9 +159,7 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
         if (st && st.mtimeMs >= sStat.mtimeMs) continue;
         fs.mkdirSync(path.dirname(png), { recursive: true });
         console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
-        await renderPng(scad, png, v);
-        // Post-process: strip metadata for determinism
-        stripPngMetadata(png);
+        await renderPngWithNormalize(scad, png, v);
       }
     }
     return 'built';
@@ -179,9 +173,9 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
 
 async function compileAll(): Promise<void> {
   const scads = listScadFiles(ROOT);
+  const results = await Bluebird.map(scads, buildIfOutdated, { concurrency: 5 });
   let built = 0, skipped = 0, failed = 0;
-  for (const scad of scads) {
-    const res = await buildIfOutdated(scad);
+  for (const res of results) {
     if (res === 'built') built++;
     else if (res === 'skipped') skipped++;
     else failed++;
@@ -191,16 +185,51 @@ async function compileAll(): Promise<void> {
   await generateModelsMd();
 }
 
-// Per-file debounce to rebuild only the changed file
+// Per-file debounce + global concurrency-limited queue to rebuild changed files
 const fileTimers = new Map<string, NodeJS.Timeout>();
+const pendingBuilds = new Set<string>();
+let processingPending = false;
+
+async function processPendingBuilds() {
+  if (processingPending) {
+    console.log('processPendingBuilds: already running, skip');
+    return;
+  }
+  processingPending = true;
+  const started = Date.now();
+  console.log(`processPendingBuilds: start, pending=${pendingBuilds.size}`);
+  try {
+    while (pendingBuilds.size) {
+      const batch: string[] = Array.from(pendingBuilds);
+      pendingBuilds.clear();
+      console.log(`processPendingBuilds: batch size=${batch.length}`);
+      const batchStart = Date.now();
+      await Bluebird.map(batch, async (file: string) => {
+        const rel = path.relative(ROOT, file);
+        const fileStart = Date.now();
+        const res = await buildIfOutdated(file);
+        console.log(`processPendingBuilds: ${rel} -> ${res} (${Date.now() - fileStart}ms)`);
+      }, { concurrency: 5 });
+      console.log(`processPendingBuilds: batch done in ${Date.now() - batchStart}ms`);
+      // Update models index after each batch
+      await generateModelsMd();
+      console.log('processPendingBuilds: models.md updated');
+    }
+  } catch (e) {
+    console.warn('processPendingBuilds: error', (e as Error).message);
+    throw e;
+  } finally {
+    processingPending = false;
+    console.log(`processPendingBuilds: finished in ${Date.now() - started}ms`);
+  }
+}
+
 function scheduleFile(scadFile: string) {
   if (fileTimers.has(scadFile)) clearTimeout(fileTimers.get(scadFile)!);
   const timer = setTimeout(() => {
     fileTimers.delete(scadFile);
-    void (async () => {
-      await buildIfOutdated(scadFile);
-      await generateModelsMd();
-    })();
+    pendingBuilds.add(scadFile);
+    void processPendingBuilds();
   }, THROTTLE_MS);
   fileTimers.set(scadFile, timer);
 }
@@ -232,6 +261,7 @@ function listDirs(dir: string): string[] {
 
 function watchFileIfNeeded(file: string) {
   if (!file.toLowerCase().endsWith('.scad')) return;
+  if (file.toLowerCase() === 'models.scad') return;
   if (watchedFiles.has(file)) return;
   try {
     fs.watchFile(file, { interval: WATCH_FILE_INTERVAL }, () => {
