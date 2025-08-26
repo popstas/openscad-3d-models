@@ -42,7 +42,7 @@ bottom_th  = 1.6;            // толщина дна основания
 corner_r   = 3.0;            // радиус скругления внутренних углов
 
 // Крышка (накладная)
-fit_clearance = 0.25;        // зазор на посадку (каждая сторона по радиусу/по XY)
+fit_clearance = 0.1;        // зазор на посадку (каждая сторона по радиусу/по XY)
 cap_wall_th   = 1.0;         // толщина стенок крышки
 cap_top_th    = 1;         // толщина верха крышки
 cap_lip_h     = 5.0;        // глубина посадочного борта крышки (внутрь)
@@ -115,10 +115,10 @@ module chamfered_rr_bottom_edges_sym(size=[10,10], r=2, h=5, chz=0.8, chx=0.8, c
                 linear_extrude(height=h - chz2)
                     rr2d([sx, sy], r);
             // нижняя фаска (аппрокс. масштабом из центра)
-            r2 = max(r - min(chx2, chy2), tiny);
-            translate([sx/2, sy/2, 0])
-                linear_extrude(height=chz2, scale=[sx/max(sx - 2*chx2, tiny), sy/max(sy - 2*chy2, tiny)])
-                    rr2d_centered([max(sx - 2*chx2, tiny), max(sy - 2*chy2, tiny)], r2);
+            //r2 = max(r - min(chx2, chy2), tiny);
+            //translate([sx/2, sy/2, 0])
+            //    linear_extrude(height=chz2, scale=[sx/max(sx - 2*chx2, tiny), sy/max(sy - 2*chy2, tiny)])
+            //        rr2d_centered([max(sx - 2*chx2, tiny), max(sy - 2*chy2, tiny)], r2);
         }
     }
 }
@@ -191,5 +191,5 @@ if(test_fragment){
     clip_for_fragments(){ base(); }{ cap(); }
 }else{
     if (print_base) base();
-    if (print_cap) translate([base_outer_x + 10, 0, 0]) cap();
+    if (print_cap) translate([0, base_outer_y + 10, 0]) cap();
 }
