@@ -373,7 +373,11 @@ function renderModelsTable(models: ModelMeta[]): string {
     const dirLink = folder ? `[${folder}](${folder}/)` : '';
     const fileLink = file ? `[${file}](${url})` : '';
     const infoCell = `<strong>${m.name}</strong><br>${date}<br>${dirLink}<br>${fileLink}`;
-    const imgTags = m.previews.map(p => `![${p.name}](${p.rel.replace('models/', '')})`);
+    const imgTags = m.previews.map(p => {
+      const rel = p.rel.replace('models/', '');
+      const alt = p.name;
+      return `<img src="${rel}" alt="${alt}" style="max-width:300px;height:auto;"/>`;
+    });
     const cells = [imgTags[0] || '&nbsp;', imgTags[1] || '&nbsp;', imgTags[2] || '&nbsp;', imgTags[3] || '&nbsp;'];
     const previewsGrid = `<table><tr><td>${cells[0]}</td><td>${cells[1]}</td></tr><tr><td>${cells[2]}</td><td>${cells[3]}</td></tr></table>`;
     lines.push(`| ${infoCell} | ${previewsGrid} |`);
