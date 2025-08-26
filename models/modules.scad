@@ -157,10 +157,6 @@ module rounded_rect_extrude_bottom_chamfer(size=[10,10], r=2, h=5, chz=0.8, chx=
                     rounded_rect([sx, sy], r);
             // bottom chamfer as scaled extrude from center
             r2 = max(r - min(chx2, chy2), eps());
-            translate([sx/2, sy/2, 0])
-                linear_extrude(height=chz2, scale=[sx/max(sx - 2*chx2, eps()), sy/max(sy - 2*chy2, eps())])
-                    translate([-max(sx - 2*chx2, eps())/2, -max(sy - 2*chy2, eps())/2])
-                        rounded_rect_centered(max(sx - 2*chx2, eps()), max(sy - 2*chy2, eps()), r2);
         }
     }
 }
