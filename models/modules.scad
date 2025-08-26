@@ -169,6 +169,44 @@ module rr_extrude(size=[10,10], r=2, h=5){
     linear_extrude(height=h) rounded_rect(size, r);
 }
 
+module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7){
+    linear_extrude(height=h, scale=s, slices=30) rounded_rect(size, r);
+}
+
+module chamfer_rr_extrude(size=[10,10], h=5, r=2, ch=1) {
+  sx = size[0]; sy = size[1];
+  // Clamp chamfer amounts using helpers (bottom chamfer)
+  chz2 = clamp_chz(h, ch);
+  chxy = clamp_chxy(sx, sy, ch, ch);
+  chx2 = chxy[0];
+  chy2 = chxy[1];
+
+  if (chz2 <= 0 || (chx2 <= 0 && chy2 <= 0)){
+    rr_extrude(size=size, r=r, h=h);
+  } else {
+    // Bottom reduced cross-section
+    sx_bot = max(sx - 2*chx2, eps());
+    sy_bot = max(sy - 2*chy2, eps());
+    r_bot = max(r - min(chx2, chy2), 0);
+    // Scale factors to expand from bottom reduced to top full
+    sX = sx / sx_bot;
+    sY = sy / sy_bot;
+
+    union(){
+      // Straight upper segment: full-size profile above chamfer height
+      translate([0,0,chz2])
+        linear_extrude(height=h - chz2)
+          rounded_rect([sx, sy], r);
+
+      // Bottom chamfer wedge: centered scale from reduced base up to full top
+      translate([sx/2, sy/2, 0])
+        linear_extrude(height=chz2, scale=[sX, sY])
+          translate([-sx_bot/2, -sy_bot/2])
+            rounded_rect([sx_bot, sy_bot], r_bot);
+    }
+  }
+}
+
 // rr_shell(size=[x,y], r, h, wall) — rectangular rounded shell of thickness wall
 module rr_shell(size=[20,20], r=2, h=10, wall=2){
     difference(){

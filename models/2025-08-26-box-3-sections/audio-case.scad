@@ -77,11 +77,13 @@ sec_corner_r = 2;          // радиус скругления углов вы�
 // Параметры крышки (cap)
 cap_top_th        = 2;     // толщина верхней пластины крышки
 cap_lip_h         = 8;     // высота юбки (захват за стенки)
-cap_fit_clearance = 0.4;   // зазор между наружными стенками коробки и внутренней поверхностью юбки
+cap_fit_clearance = 0.2;   // зазор между наружными стенками коробки и внутренней поверхностью юбки
 cap_outer_margin  = 0.8;   // выступ крышки наружу относительно корпуса (по всем сторонам)
+cap_minkowski_r  = 2;   // радиус скругления краёв крышки через minkowski
+base_minkowski_r = 2;   // радиус скругления краёв основания через minkowski
 
 inner_y_shift = inner_y - wall_th;
-inner_x_shift = inner_x - wall_th;
+cap_h = cap_top_th + cap_lip_h;   // итоговая высота крышки
 
 // ----------------------------
 // Фрагменты
@@ -115,8 +117,8 @@ module base_fill(){
     rr_extrude(size=[outer_x, outer_y], r=radius_r, h=outer_h);
 }
 
-section_x_offset = wall_th/2;
-section_y = wall_th/2;
+section_x_offset = wall_th+wall_th/2;
+section_y = wall_th+wall_th/2;
 // Три выреза-отсека. Их суммарная ширина и позиции оставляют наружные стены и две перегородки толщиной divider_th.
 module section_red(){
     translate([section_x_offset, section_y, bottom_th])
@@ -134,9 +136,24 @@ module section_green(){
 }
 
 module base(){
-    // Корпус-лоток как разность базового объёма и 3 секций
+    // Корпус-лоток как разность наружного корпуса (с опциональным Minkowski) и 3 секций
     difference(){
-        base_fill();
+        // Наружный корпус
+        if (base_minkowski_r > 0){
+            // Сохраняем габариты и выравнивание в (0,0):
+            // 1) предварительно уменьшаем XY и Z на 2*r
+            // 2) выполняем minkowski со сферой, сдвинутой на [r,r,r], чтобы min-угол оставался в (0,0)
+            minkowski(){
+                rr_extrude(size=[max(outer_x - 2*base_minkowski_r, eps()), max(outer_y - 2*base_minkowski_r, eps())],
+                           r=max(radius_r - base_minkowski_r, 0),
+                           h=max(outer_h - 2*base_minkowski_r, eps()));
+                translate([base_minkowski_r, base_minkowski_r, base_minkowski_r]) sphere(r=base_minkowski_r);
+            }
+        } else {
+            base_fill();
+        }
+
+        // Вырезы секций
         section_red();
         section_yellow();
         section_green();
@@ -151,33 +168,58 @@ module base(){
 // - внутренней юбки высотой cap_lip_h, которая надевается на корпус с зазором cap_fit_clearance
 // Компоненты крышки вынесены в отдельные модули: cap_pad, cap_skirt, cap_skirt_inner
 
-// Верхняя пластина крышки
+// Верхняя пластина крышки (top pad)
 module cap_pad(){
     rr_extrude(size=[outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin, h=cap_top_th);
 }
 
-// Наружная юбка (тело)
+// Наружная юбка (outer skirt)
 module cap_skirt(){
     rr_extrude(size=[outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin, h=cap_lip_h);
 }
 
-// Внутренняя выемка юбки (для difference)
+// Внутренняя поверхность юбки (inner cut) — делает посадку по зазору
 module cap_skirt_inner(){
     translate([0,0,-eps()])
         rr_extrude(size=[outer_x + 2*cap_fit_clearance, outer_y + 2*cap_fit_clearance], r=radius_r + cap_fit_clearance, h=cap_lip_h + 2*eps());
 }
-module cap(){
-    union(){
-        // Верхняя пластина
-        cap_pad();
 
-        // Юбка под верхней пластиной
-        difference(){
-            cap_skirt();
-            // Внутренняя поверхность юбки: чуть больше, чем наружный размер корпуса, на зазор
-            cap_skirt_inner();
+// Внешний сплошной объём крышки: цельное тело высотой cap_top_th+cap_lip_h
+// При включённом Minkowski предварительно уменьшаем высоту на cap_minkowski_r, чтобы итоговая высота сохранилась
+module cap_outer_solid(){
+    cap_h_target = cap_top_th + cap_lip_h;
+    // Minkowski with translate([0,0,r]) sphere(r) increases height by +2r while keeping bottom at Z=0
+    h_outer = cap_h_target - (cap_minkowski_r > 0 ? 2*cap_minkowski_r : 0);
+    rr_extrude(size=[outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin, h=max(h_outer, eps()));
+}
+
+// Готовая крышка: внешнее тело (с опциональным скруглением через Minkowski) минус внутренняя выемка юбки
+module cap_body(){
+    difference(){
+        // Наружный контур с опциональным скруглением краёв
+        if (cap_minkowski_r > 0){
+            minkowski(){
+                cap_outer_solid();
+                // Сдвиг сферы вверх на r сохраняет нижнюю плоскость без скругления
+                translate([0,0,cap_minkowski_r]) sphere(r=cap_minkowski_r);
+            }
+        } else {
+            cap_outer_solid();
         }
+        // Внутренняя выемка юбки (посадка по зазору)
+        cap_skirt_inner();
     }
+}
+
+module cap(){
+    cap_body();
+}
+
+// Разворот крышки вверх дном для печати (лежит плоской верхней стороной на столе)
+module cap_upside_down(){
+    translate([0, 0, cap_h])
+        mirror([0, 0, 1])
+            cap();
 }
 
 // ---------------
@@ -198,7 +240,7 @@ module all_parts(){
     x_shift = (print_box && print_cap) ? (outer_x + x_gap) : 0;
 
     if (print_box) translate([0, 0, 0]) base();
-    if (print_cap) translate([x_shift, 0, 0]) cap();
+    if (print_cap) translate([x_shift, 0, 0]) cap_upside_down();
 }
 
 // ----------------------------
