@@ -7,6 +7,9 @@
 // Short description for models table
 description = "Circular Plate Cap Ø123.6 (shell 1 mm, height 5 mm)";
 
+// Shared library
+use <../modules.scad>
+
 // ----------------------------
 // Настройка точности
 // ----------------------------
@@ -27,7 +30,6 @@ frag_h_extra  = 20;    // запас по высоте клипа, мм
 // ----------------------------
 // Фаски/скругления по краям
 // ----------------------------
-tiny = 0.1;                  // небольшой зазор для булевых операций
 edge_chamfer_z = 0.8;        // высота фаски по Z (мм) для верхнего края
 edge_chamfer_x = 0;          // совместимость с шаблонами
 edge_chamfer_y = 0;          // совместимость с шаблонами
@@ -48,7 +50,7 @@ fit_extra_inner = 0.20;    // технологический запас внут
 // Вычисляемые размеры
 cap_inner_d_eff = cap_inner_d + 2*fit_extra_inner; // реальный внутренний Ø для печати
 cap_outer_d     = cap_inner_d_eff + 2*wall_th;     // наружный Ø
-skirt_h         = max(cap_height - top_th, tiny);  // высота юбки (без верхней крышки)
+skirt_h         = max(cap_height - top_th, eps());  // высота юбки (без верхней крышки)
 
 // ----------------------------
 // Комментарии по устройству модели
@@ -61,17 +63,6 @@ skirt_h         = max(cap_height - top_th, tiny);  // высота юбки (б�
 // ----------------------------
 // Вспомогательные функции/модули
 // ----------------------------
-module round_chamfer_ring(d_outer, d_inner, h, chamfer){
-    h_ch = min(chamfer, h/2);
-    difference(){
-        cylinder(h=h - h_ch, d=d_outer);
-        translate([0,0,0]) cylinder(h=h - h_ch + tiny, d=d_inner);
-    }
-    difference(){
-        translate([0,0,h - h_ch]) cylinder(h=h_ch, d1=d_outer, d2=max(d_outer - 2*h_ch, tiny));
-        translate([0,0,h - h_ch]) cylinder(h=h_ch + tiny, d1=d_inner, d2=max(d_inner + 2*h_ch, tiny));
-    }
-}
 
 module cap_body(){
     union(){
@@ -79,7 +70,7 @@ module cap_body(){
         cylinder(h=top_th, d=cap_outer_d);
         // Юбка с мягким переходом сверху
         translate([0,0,0])
-            round_chamfer_ring(d_outer=cap_outer_d, d_inner=cap_inner_d_eff, h=skirt_h, chamfer=radius_r);
+            chamfer_ring(d_outer=cap_outer_d, d_inner=cap_inner_d_eff, h=skirt_h, chamfer=radius_r);
     }
 }
 

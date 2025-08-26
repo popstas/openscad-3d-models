@@ -3,6 +3,9 @@
 // Short description for models table
 description = "ECig platform stand with oval cup";
 
+// Shared library
+use <../modules.scad>
+
 // ====================== Точность рендера ======================
 $fn = 0;        // фиксированную сегментацию отключаем
 $fa = 6;        // 5–8° обычно достаточно
@@ -10,7 +13,6 @@ $fs = 0.35;     // ≈ диаметр сопла (0.3–0.5 для сопла 0.
 pin_fs = 0.25;  // чуть тоньше для штырей и отверстий
 
 // ====================== Служебные параметры ===================
-tiny = 0.10;            // небольшой зазор для булевых операций
 screen_frame_gap = 0.2; // только для высоты вычитаний (не влияет на XY)
 
 // ====================== Режим фрагмента ======================
@@ -71,29 +73,13 @@ edge_chamfer_y = 1.5;  // «вылет» фаски по Y (на сторону)
 */
 
 // ====================== Вспомогательные 2D ====================
-module rounded_rect2d(w, h, r) {
-    r2 = min(r, min(w, h)/2);
-    minkowski() {
-        square([max(w - 2*r2, tiny), max(h - 2*r2, tiny)], center=true);
-        circle(r=r2);
-    }
-}
-
-// Анизотропный скруглённый прямоугольник (разные радиусы по X/Y)
-module rounded_rect2d_aniso(w, h, rx, ry) {
-    rx2 = min(rx, w/2);
-    ry2 = min(ry, h/2);
-    minkowski() {
-        square([max(w - 2*rx2, tiny), max(h - 2*ry2, tiny)], center=true);
-        scale([rx2, ry2]) circle(r=1);
-    }
-}
+// (use rounded_rect_centered / rounded_rect_aniso from modules.scad)
 
 // Профиль стакана с овальными торцами (rx:ry = cup_r_ratio:1)
 module cup_profile2d(w, h) {
     ry = min(h/2, w/(2*cup_r_ratio));
     rx = min(w/2, cup_r_ratio*ry);
-    rounded_rect2d_aniso(w, h, rx, ry);
+    rounded_rect_aniso(w, h, rx, ry);
 }
 
 // Профиль основания (внешний контур) с тем же cup_r_ratio
@@ -102,7 +88,7 @@ module base_profile2d(w, h, rr) {
     // ограничиваем максимальный малый радиус параметром base_round_r
     ry = min(h/2, w/(2*rr), base_round_r);
     rx = min(w/2, rr*ry, base_round_r*rr);
-    rounded_rect2d_aniso(w, h, rx, ry);
+    rounded_rect_aniso(w, h, rx, ry);
 }
 
 // ====================== Геометрия деталей =====================
@@ -119,8 +105,8 @@ module base_solid() {
     taper_x = (taper_mode=="auto") ? (base_w - top_w_auto) : manual_outer_taper_total_x;
     taper_y = (taper_mode=="auto") ? (base_t - top_t_auto) : manual_outer_taper_total_y;
 
-    sx = max((base_w - taper_x) / max(base_w, tiny), 0.1);
-    sy = max((base_t - taper_y) / max(base_t, tiny), 0.1);
+    sx = max((base_w - taper_x) / max(base_w, eps()), 0.1);
+    sy = max((base_t - taper_y) / max(base_t, eps()), 0.1);
 
     // Чтобы верхняя кромка имела те же пропорции скруглений, что и стакан,
     // компенсируем анизотропное масштабирование: на дне ставим rr_bottom,
@@ -142,8 +128,8 @@ module cup_cut() {
             cup_profile2d(cup_w, cup_t);
 
     // Фаска: конический (frustum) вырез сверху
-    sx = (cup_w + 2*edge_chamfer_x) / max(cup_w, tiny);
-    sy = (cup_t + 2*edge_chamfer_y) / max(cup_t, tiny);
+    sx = (cup_w + 2*edge_chamfer_x) / max(cup_w, eps());
+    sy = (cup_t + 2*edge_chamfer_y) / max(cup_t, eps());
     translate([0,0, base_h - edge_chamfer_z - screen_frame_gap])
         linear_extrude(height=edge_chamfer_z + 2*screen_frame_gap, scale=[sx, sy])
             cup_profile2d(cup_w, cup_t);

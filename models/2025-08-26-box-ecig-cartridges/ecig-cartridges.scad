@@ -7,6 +7,9 @@
 // Short description for models table
 description = "Audio Tools Case — base";
 
+// Shared library
+use <../modules.scad>
+
 // ----------------------------
 // Настройка точности
 // ----------------------------
@@ -27,7 +30,6 @@ frag_h_extra  = 20;      // запас по высоте клипа, мм
 // ----------------------------
 // Фаски/скругления по краям (совместимость)
 // ----------------------------
-tiny = 0.1;                  // небольшой зазор для булевых операций
 edge_chamfer_z = 1;          // высота фаски по Z (мм)
 edge_chamfer_x = 5;          // горизонтальный вылет фаски по X (каждая сторона), мм
 edge_chamfer_y = 5;          // горизонтальный вылет фаски по Y (каждая сторона), мм
@@ -91,14 +93,10 @@ inner_x_shift = inner_x - wall_th;
 // ----------------------------
 // Вспомогательные
 // ----------------------------
-module rr2d(size=[10,10], r=2){
-    sx = size[0]; sy = size[1];
-    offset(r=r) square([max(sx-2*r, tiny), max(sy-2*r, tiny)], center=false);
-}
 
 // Базовый контур корпуса для оффсетов
 module base_outline2d(){
-    rr2d([outer_x, outer_y], r=radius_r);
+    rounded_rect([outer_x, outer_y], r=radius_r);
 }
 
 // ----------------------------
@@ -113,14 +111,14 @@ outer_h = bottom_th + inner_h;
 // Внутренняя полость (общая) — используется только для справки
 module inner_cavity(){
     translate([wall_th, wall_th, bottom_th])
-        linear_extrude(height=inner_h + tiny)
-            rr2d([outer_x - 2*wall_th, outer_y - 2*wall_th], r=max(radius_r - wall_th, 0));
+        linear_extrude(height=inner_h + eps())
+            rounded_rect([outer_x - 2*wall_th, outer_y - 2*wall_th], r=max(radius_r - wall_th, 0));
 }
 
 // Базовый заполняющий объём (без вырезов) — внешний контур на полную высоту
 module base_fill(){
     linear_extrude(height=outer_h)
-        rr2d([outer_x, outer_y], r=radius_r);
+        rounded_rect([outer_x, outer_y], r=radius_r);
 }
 
 section_x_offset = wall_th/2;
@@ -129,19 +127,19 @@ section_y = wall_th/2;
 module section_red(){
     translate([section_x_offset, section_y, bottom_th])
         linear_extrude(height=inner_h)
-            rr2d([red_w, inner_y_shift], r=sec_corner_r);
+            rounded_rect([red_w, inner_y_shift], r=sec_corner_r);
 }
 
 module section_yellow(){
     translate([section_x_offset + red_w + divider_th, section_y, bottom_th])
         linear_extrude(height=inner_h)
-            rr2d([yellow_w, inner_y_shift], r=sec_corner_r);
+            rounded_rect([yellow_w, inner_y_shift], r=sec_corner_r);
 }
 
 module section_green(){
     translate([section_x_offset + red_w + divider_th + yellow_w + divider_th, section_y, bottom_th])
         linear_extrude(height=inner_h)
-            rr2d([green_w, inner_y_shift], r=sec_corner_r);
+            rounded_rect([green_w, inner_y_shift], r=sec_corner_r);
 }
 
 module base(){
@@ -165,20 +163,20 @@ module base(){
 // Верхняя пластина крышки
 module cap_pad(){
     linear_extrude(height=cap_top_th)
-        rr2d([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
+        rounded_rect([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
 }
 
 // Наружная юбка (тело)
 module cap_skirt(){
     linear_extrude(height=cap_lip_h)
-        rr2d([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
+        rounded_rect([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
 }
 
 // Внутренняя выемка юбки (для difference)
 module cap_skirt_inner(){
-    translate([0,0,-tiny])
-        linear_extrude(height=cap_lip_h + 2*tiny)
-            rr2d([outer_x + 2*cap_fit_clearance, outer_y + 2*cap_fit_clearance], r=radius_r + cap_fit_clearance);
+    translate([0,0,-eps()])
+        linear_extrude(height=cap_lip_h + 2*eps())
+            rounded_rect([outer_x + 2*cap_fit_clearance, outer_y + 2*cap_fit_clearance], r=radius_r + cap_fit_clearance);
 }
 module cap(){
     union(){

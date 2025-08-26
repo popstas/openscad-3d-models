@@ -7,6 +7,9 @@
 // Short description for models table
 description = "phone iphone14 mini table holder — base";
 
+// Shared library
+use <../modules.scad>
+
 // ----------------------------
 // Настройка точности
 // ----------------------------
@@ -30,7 +33,6 @@ flip_upside_down = true; // повернуть модель дном вверх 
 // ----------------------------
 // Фаски/скругления по краям (совместимость)
 // ----------------------------
-tiny = 0.1;                  // небольшой зазор для булевых операций
 edge_chamfer_z = 1;          // высота фаски по Z (мм)
 edge_chamfer_x = 5;          // горизонтальный вылет фаски по X (каждая сторона), мм
 edge_chamfer_y = 5;          // горизонтальный вылет фаски по Y (каждая сторона), мм
@@ -83,27 +85,8 @@ body_y     = pocket_d + back_wall;                      // длина корпу
 // - top_pad, base_pad, wrap_left, main_wall: примеры имён
 
 // ----------------------------
-// Вспомогательные
+// Вспомогательные: используем обобщённые модули из modules.scad
 // ----------------------------
-module rr2d(size=[10,10], r=2){
-    sx = size[0]; sy = size[1];
-    // Anchor at [0..sx, 0..sy]
-    translate([r, r]) offset(r=r)
-        square([max(sx-2*r, tiny), max(sy-2*r, tiny)], center=false);
-}
-
-// Универсальный цилиндр-бар вдоль оси Y
-// xc — центр по X, zc — центр по Z, r — радиус, h — длина по Y
-module cyl_bar_y(xc, zc, r, h=phone_h){
-    translate([xc, 0, zc]) rotate([-90,0,0])
-        cylinder(h=h, r=r, $fs=pin_fs, $fa=6);
-}
-
-// Призма для фаски низа корпуса вдоль оси Y (треугольный клин)
-module chamfer_wedge_y(ch, len_y){
-    linear_extrude(height=len_y)
-        polygon(points=[[0,0],[ch,0],[0,ch]]);
-}
 
 // Фаски низа корпуса вдоль оси Y: вычитание треугольных призм по бокам
 module base_bottom_chamfers(){
@@ -128,12 +111,12 @@ module pocket_cut(){
     // Основная полость под телефон
     translate([wall_xy, 0, wall_z])
         linear_extrude(height=phone_t + pocket_clear_z)
-            rr2d([pocket_w, pocket_d], r=pocket_r_xy);
+            rounded_rect([pocket_w, pocket_d], r=pocket_r_xy);
 
     // Нижний вырез от края стола внутрь на долю глубины (50%)
     translate([wall_xy, 0, 0])
         linear_extrude(height=notch_h)
-            rr2d([pocket_w, pocket_d*notch_depth_ratio], r=notch_r_xy);
+            rounded_rect([pocket_w, pocket_d*notch_depth_ratio], r=notch_r_xy);
 
     // Призматическая фаска (треугольная по Z) ВНУТРИ кармана: кольцо между
     // уменьшенным сечением (сверху) и базовым (снизу), чтобы клин смотрел внутрь
@@ -144,9 +127,9 @@ module pocket_cut(){
             // Внешняя граница фаски — УМЕНЬШЕННОЕ сечение (верхняя грань)
             linear_extrude(height=ch)
                 translate([ch, ch])
-                    rr2d([max(pocket_w - 2*ch, tiny), max(pocket_d - 2*ch, tiny)], r=max(pocket_r_xy - ch, tiny));
+                    rounded_rect([max(pocket_w - 2*ch, eps()), max(pocket_d - 2*ch, eps())], r=max(pocket_r_xy - ch, eps()));
             // Внутренняя граница фаски — базовое сечение (нижняя грань)
-            linear_extrude(height=ch) rr2d([pocket_w, pocket_d], r=pocket_r_xy);
+            linear_extrude(height=ch) rounded_rect([pocket_w, pocket_d], r=pocket_r_xy);
         }
 }
 
@@ -154,10 +137,10 @@ module pocket_cut(){
 module handles_front_cut(){
     if(handles_cut_use_rr2d){
         // Сильно скруглённый прямоугольник на всю phone_h, по Z — насквозь
-        linear_extrude(height=base_h + 2*tiny){
+        linear_extrude(height=base_h + 2*eps()){
             union(){
-                translate([-handle_ext, 0]) rr2d([handle_ext, phone_h], r=handles_front_cut_r);
-                translate([body_x, 0])      rr2d([handle_ext, phone_h], r=handles_front_cut_r);
+                translate([-handle_ext, 0]) rounded_rect([handle_ext, phone_h], r=handles_front_cut_r);
+                translate([body_x, 0])      rounded_rect([handle_ext, phone_h], r=handles_front_cut_r);
             }
         }
     } else {
@@ -178,7 +161,7 @@ module base(){
             // Корпус + расширенная подложка по X (симметрично: +/- base_pad_extra_x)
             translate([-base_pad_extra_x, 0, 0])
                 linear_extrude(height=base_h)
-                    rr2d([body_x + 2*base_pad_extra_x, body_y], r=body_r_xy);
+                    rounded_rect([body_x + 2*base_pad_extra_x, body_y], r=body_r_xy);
         }
         // Полость и нижний вырез
         pocket_cut();
