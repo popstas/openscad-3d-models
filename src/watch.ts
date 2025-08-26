@@ -1,6 +1,8 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
+import { PNG } from 'pngjs';
 
 const ROOT = process.cwd();
 const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'openscad';
@@ -85,47 +87,32 @@ function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
   });
 }
 
-// Strip PNG metadata to ensure deterministic PNGs.
-// Keeps only critical chunks (IHDR, PLTE, IDAT, IEND) and tRNS (transparency).
-// Drops ancillary chunks like tEXt/iTXt/zTXt, tIME, pHYs, sRGB, gAMA, cHRM, eXIf, iCCP, etc.
-function stripPngMetadata(pngPath: string): void {
+// Re-encode PNG with no filtering and fixed Huffman strategy for deterministic output
+function normalizePng(pngPath: string): void {
   let buf: Buffer;
   try { buf = fs.readFileSync(pngPath); } catch { return; }
-  // PNG signature
-  const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  if (buf.length < 8 || !buf.slice(0, 8).equals(SIG)) return;
-
-  const outParts: Buffer[] = [SIG];
-  let off = 8;
-  let changed = false;
-  while (off + 12 <= buf.length) {
-    const len = buf.readUInt32BE(off);
-    const type = buf.slice(off + 4, off + 8);
-    const chunkStart = off;
-    const dataStart = off + 8;
-    const dataEnd = dataStart + len;
-    const crcEnd = dataEnd + 4;
-    if (crcEnd > buf.length) break; // malformed
-
-    const typeStr = type.toString('ascii');
-    // Criticality is determined by first letter uppercase. Keep critical and tRNS.
-    const isCritical = typeStr[0] === typeStr[0]?.toUpperCase();
-    const keep = isCritical || typeStr === 'tRNS';
-
-    if (keep) {
-      outParts.push(buf.slice(chunkStart, crcEnd));
-    } else {
-      changed = true; // we are dropping a chunk
-    }
-
-    // IEND marks the end; stop afterwards to avoid junk
-    if (typeStr === 'IEND') break;
-    off = crcEnd;
-  }
-
-  const outBuf = Buffer.concat(outParts);
-  if (changed && !outBuf.equals(buf)) {
-    try { fs.writeFileSync(pngPath, outBuf); } catch {}
+  try {
+    const img = PNG.sync.read(buf);
+    const colorType = (img as any).colorType ?? 6;
+    const bitDepth = (img as any).depth ?? 8;
+    const out = new PNG({
+      width: img.width,
+      height: img.height,
+      colorType,
+      bitDepth,
+      filterType: 0,
+    });
+    img.data.copy(out.data);
+    const outBuf = PNG.sync.write(out, {
+      filterType: 0,
+      colorType,
+      bitDepth,
+      deflateLevel: 9,
+      deflateStrategy: zlib.constants.Z_FIXED,
+    });
+    if (!outBuf.equals(buf)) fs.writeFileSync(pngPath, outBuf);
+  } catch {
+    // ignore malformed images
   }
 }
 
@@ -164,8 +151,8 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
         fs.mkdirSync(path.dirname(png), { recursive: true });
         console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
         await renderPng(scad, png, v);
-        // Post-process: strip metadata for determinism
-        stripPngMetadata(png);
+        // Post-process: re-encode for deterministic output
+        normalizePng(png);
       }
     }
     return 'built';
