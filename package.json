@@ -12,6 +12,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "pako": "^2.1.0"
+  },
   "devDependencies": {
     "@types/node": "^24.3.0",
     "tsx": "^4.20.5",

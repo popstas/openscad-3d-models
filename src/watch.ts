@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
+import { deflate, constants as zc } from 'pako';
 
 const ROOT = process.cwd();
 const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'openscad';
@@ -155,7 +156,8 @@ function stripPngMetadata(pngPath: string): void {
   if (idatParts.length) {
     let raw: Buffer;
     try { raw = zlib.inflateSync(Buffer.concat(idatParts)); } catch { return; }
-    const recompressed = zlib.deflateSync(raw, { level: 9 });
+    const recompressedU8 = deflate(raw, { level: 9, strategy: zc.Z_FIXED });
+    const recompressed = Buffer.from(recompressedU8);
     const lenBuf = Buffer.alloc(4);
     lenBuf.writeUInt32BE(recompressed.length, 0);
     const type = Buffer.from('IDAT');
