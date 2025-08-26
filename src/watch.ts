@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 
 const ROOT = process.cwd();
 const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'openscad';
@@ -85,19 +86,42 @@ function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
   });
 }
 
+// CRC32 utility for PNG chunk checksums
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(buf: Buffer): number {
+  let c = 0xffffffff;
+  for (const b of buf) {
+    c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+
 // Strip PNG metadata to ensure deterministic PNGs.
 // Keeps only critical chunks (IHDR, PLTE, IDAT, IEND) and tRNS (transparency).
 // Drops ancillary chunks like tEXt/iTXt/zTXt, tIME, pHYs, sRGB, gAMA, cHRM, eXIf, iCCP, etc.
 function stripPngMetadata(pngPath: string): void {
   let buf: Buffer;
   try { buf = fs.readFileSync(pngPath); } catch { return; }
-  // PNG signature
   const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   if (buf.length < 8 || !buf.slice(0, 8).equals(SIG)) return;
 
-  const outParts: Buffer[] = [SIG];
+  const parts: Buffer[] = [SIG];
+  const idatParts: Buffer[] = [];
+  let iend: Buffer | null = null;
   let off = 8;
   let changed = false;
+
   while (off + 12 <= buf.length) {
     const len = buf.readUInt32BE(off);
     const type = buf.slice(off + 4, off + 8);
@@ -105,25 +129,44 @@ function stripPngMetadata(pngPath: string): void {
     const dataStart = off + 8;
     const dataEnd = dataStart + len;
     const crcEnd = dataEnd + 4;
-    if (crcEnd > buf.length) break; // malformed
+    if (crcEnd > buf.length) break;
 
     const typeStr = type.toString('ascii');
-    // Criticality is determined by first letter uppercase. Keep critical and tRNS.
+    const chunk = buf.slice(chunkStart, crcEnd);
     const isCritical = typeStr[0] === typeStr[0]?.toUpperCase();
     const keep = isCritical || typeStr === 'tRNS';
 
-    if (keep) {
-      outParts.push(buf.slice(chunkStart, crcEnd));
+    if (typeStr === 'IDAT') {
+      idatParts.push(buf.slice(dataStart, dataEnd));
+      changed = true;
+    } else if (typeStr === 'IEND') {
+      iend = chunk;
+      break;
+    } else if (keep) {
+      parts.push(chunk);
     } else {
-      changed = true; // we are dropping a chunk
+      changed = true;
     }
-
-    // IEND marks the end; stop afterwards to avoid junk
-    if (typeStr === 'IEND') break;
     off = crcEnd;
   }
 
-  const outBuf = Buffer.concat(outParts);
+  if (!iend) return;
+
+  if (idatParts.length) {
+    let raw: Buffer;
+    try { raw = zlib.inflateSync(Buffer.concat(idatParts)); } catch { return; }
+    const recompressed = zlib.deflateSync(raw, { level: 9 });
+    const lenBuf = Buffer.alloc(4);
+    lenBuf.writeUInt32BE(recompressed.length, 0);
+    const type = Buffer.from('IDAT');
+    const crc = crc32(Buffer.concat([type, recompressed]));
+    const crcBuf = Buffer.alloc(4);
+    crcBuf.writeUInt32BE(crc >>> 0, 0);
+    parts.push(Buffer.concat([lenBuf, type, recompressed, crcBuf]));
+  }
+
+  parts.push(iend);
+  const outBuf = Buffer.concat(parts);
   if (changed && !outBuf.equals(buf)) {
     try { fs.writeFileSync(pngPath, outBuf); } catch {}
   }
