@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { PNG } from 'pngjs';
 
 const ROOT = process.cwd();
 const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'openscad';
@@ -85,47 +86,86 @@ function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
   });
 }
 
-// Strip PNG metadata to ensure deterministic PNGs.
-// Keeps only critical chunks (IHDR, PLTE, IDAT, IEND) and tRNS (transparency).
-// Drops ancillary chunks like tEXt/iTXt/zTXt, tIME, pHYs, sRGB, gAMA, cHRM, eXIf, iCCP, etc.
-function stripPngMetadata(pngPath: string): void {
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? 0xEDB88320 ^ (c >>> 1) : (c >>> 1);
+    }
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(buf: Buffer): number {
+  let c = ~0;
+  for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
+  return (~c) >>> 0;
+}
+
+function makeChunk(type: string, data: Buffer): Buffer {
+  const typeBuf = Buffer.from(type, 'ascii');
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(data.length, 0);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+  return Buffer.concat([len, typeBuf, data, crc]);
+}
+
+function deflateStore(data: Buffer): Buffer {
+  const max = 0xffff;
+  const out: Buffer[] = [];
+  let pos = 0;
+  while (pos < data.length) {
+    const chunkLen = Math.min(max, data.length - pos);
+    const block = Buffer.alloc(5 + chunkLen);
+    const final = pos + chunkLen >= data.length ? 1 : 0;
+    block[0] = final; // BFINAL + BTYPE=0
+    block.writeUInt16LE(chunkLen, 1);
+    block.writeUInt16LE(~chunkLen & 0xffff, 3);
+    data.copy(block, 5, pos, pos + chunkLen);
+    out.push(block);
+    pos += chunkLen;
+  }
+  return Buffer.concat(out);
+}
+
+// Re-encode PNG deterministically with uncompressed deflate
+function normalizePng(pngPath: string): void {
   let buf: Buffer;
   try { buf = fs.readFileSync(pngPath); } catch { return; }
-  // PNG signature
-  const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  if (buf.length < 8 || !buf.slice(0, 8).equals(SIG)) return;
-
-  const outParts: Buffer[] = [SIG];
-  let off = 8;
-  let changed = false;
-  while (off + 12 <= buf.length) {
-    const len = buf.readUInt32BE(off);
-    const type = buf.slice(off + 4, off + 8);
-    const chunkStart = off;
-    const dataStart = off + 8;
-    const dataEnd = dataStart + len;
-    const crcEnd = dataEnd + 4;
-    if (crcEnd > buf.length) break; // malformed
-
-    const typeStr = type.toString('ascii');
-    // Criticality is determined by first letter uppercase. Keep critical and tRNS.
-    const isCritical = typeStr[0] === typeStr[0]?.toUpperCase();
-    const keep = isCritical || typeStr === 'tRNS';
-
-    if (keep) {
-      outParts.push(buf.slice(chunkStart, crcEnd));
-    } else {
-      changed = true; // we are dropping a chunk
+  try {
+    const img = PNG.sync.read(buf);
+    const colorType = (img as any).colorType ?? 6;
+    const bitDepth = (img as any).depth ?? 8;
+    const bpp = 4; // OpenSCAD outputs RGBA
+    const row = img.width * bpp;
+    const raw = Buffer.alloc((row + 1) * img.height);
+    for (let y = 0; y < img.height; y++) {
+      const off = (row + 1) * y;
+      raw[off] = 0; // filter type 0
+      img.data.copy(raw, off + 1, row * y, row * (y + 1));
     }
-
-    // IEND marks the end; stop afterwards to avoid junk
-    if (typeStr === 'IEND') break;
-    off = crcEnd;
-  }
-
-  const outBuf = Buffer.concat(outParts);
-  if (changed && !outBuf.equals(buf)) {
-    try { fs.writeFileSync(pngPath, outBuf); } catch {}
+    const header = Buffer.alloc(13);
+    header.writeUInt32BE(img.width, 0);
+    header.writeUInt32BE(img.height, 4);
+    header.writeUInt8(bitDepth, 8);
+    header.writeUInt8(colorType, 9);
+    header.writeUInt8(0, 10); // compression
+    header.writeUInt8(0, 11); // filter
+    header.writeUInt8(0, 12); // interlace
+    const chunks = [
+      makeChunk('IHDR', header),
+      makeChunk('IDAT', deflateStore(raw)),
+      makeChunk('IEND', Buffer.alloc(0)),
+    ];
+    const outBuf = Buffer.concat([PNG_SIG, ...chunks]);
+    if (!outBuf.equals(buf)) fs.writeFileSync(pngPath, outBuf);
+  } catch {
+    // ignore malformed images
   }
 }
 
@@ -164,8 +204,8 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
         fs.mkdirSync(path.dirname(png), { recursive: true });
         console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
         await renderPng(scad, png, v);
-        // Post-process: strip metadata for determinism
-        stripPngMetadata(png);
+        // Post-process: re-encode for deterministic output
+        normalizePng(png);
       }
     }
     return 'built';
