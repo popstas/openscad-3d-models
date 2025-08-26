@@ -1,26 +1,34 @@
-# Plate Cap Ø123.6 (1 mm wall, 5 mm height)
+# Cup Cap Ø76.1 (1 mm wall, 10 mm height)
 
 Параметрическая круглая крышка-колпак.
 
-- Файл модели: `plate-cap-123.scad`
+- Файл модели: `cup-cap-76.scad`
 - Версия: 1.0
 
 ## Параметры
-- Внутренний диаметр: 123.6 мм (с посадочным запасом `fit_extra_inner`)
+- Внутренний диаметр (номинал): 76.1 мм
+- Посадочный запас внутрь: `fit_extra_inner = 0.4` мм (эффективный внутренний Ø = 76.9 мм)
 - Толщина стенки: 1.0 мм
 - Толщина верхней крышки: 1.0 мм
-- Внешняя высота: 5.0 мм
-- Радиусы скругления кромки: 1–2 мм (`radius_r`)
+- Внешняя высота: 10.0 мм
+- Радиус скругления верхней кромки юбки: 1.5 мм (`radius_r`)
 
-## Рендер
-Включите/отключите `test_fragment` для печати тестовых вырезок.
+## Фрагменты модели
+- `base` — полный колпак: плоский диск толщиной `top_th` + юбка высотой `skirt_h`.
+
+## Рендер и тестовые вырезки
+Включите/отключите `test_fragment` для печати тестовых вырезок. Параметры вырезок:
+- `frag_size` — размер квадрата вырезки (мм)
+- `frag_index` — индекс сектора (0=НЛ, 1=ВЛ, 2=НП, 3=ВП)
+- `frag_gap_x` — зазор между фрагментами по X (мм)
+- `frag_h_extra` — дополнительная высота клипа (мм)
 
 ## Превью
 
-![plate-cap iso-p](plate-cap-123.preview.iso-p.png)
+![cup-cap iso-p](cup-cap-76.preview.iso-p.png)
 
-![plate-cap xy-o](plate-cap-123.preview.xy-o.png)
+![cup-cap xy-o](cup-cap-76.preview.xy-o.png)
 
-![plate-cap xz-p](plate-cap-123.preview.xz-p.png)
+![cup-cap xz-p](cup-cap-76.preview.xz-p.png)
 
-![plate-cap xy-p](plate-cap-123.preview.xy-p.png)
+![cup-cap yz-p](cup-cap-76.preview.yz-p.png)

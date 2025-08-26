@@ -74,6 +74,9 @@ cylinder(h=..., d=pin_diam + 0.2, $fs=pin_fs, $fa=6);
 В начале создай README.md модели, опиши все фрагменты.
 Потом создай scad файл модели.
 
+Add variable `description = "";` in the top of scad file.
+Write one line short description to var.
+
 ## Структура модели
 
 ### Параметры модели

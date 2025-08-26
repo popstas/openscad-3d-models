@@ -316,13 +316,15 @@ type ModelMeta = {
 };
 
 function extractModelName(source: string): { name: string; description: string } {
-  // Find line starting with // 3D:
-  const re = /^\s*\/\/\s*3D:\s*(.+)\s*$/im;
-  const m = source.match(re);
-  if (!m) return { name: '', description: '' };
-  const full = m[1].trim();
-  // We only have a single string; use it as the name, leave description empty
-  return { name: full, description: '' };
+  // Name: line starting with // 3D:
+  const nameRe = /^\s*\/\/\s*3D:\s*(.+)\s*$/im;
+  const m = source.match(nameRe);
+  const full = m ? m[1].trim() : '';
+  // Description: description = "...";
+  const descRe = /^\s*description\s*=\s*"([^"]*)"\s*;\s*$/im;
+  const d = source.match(descRe);
+  const desc = d ? d[1].trim() : '';
+  return { name: full, description: desc };
 }
 
 function readTextSafe(file: string): string | null {
@@ -361,8 +363,8 @@ function renderModelsTable(models: ModelMeta[]): string {
   const lines: string[] = [];
   lines.push('# Models');
   lines.push('');
-  lines.push('| Info | Preview 1 | Preview 2 |');
-  lines.push('| ---- | --------- | --------- |');
+  lines.push('| Info | Description | Preview 1 | Preview 2 |');
+  lines.push('| ---- | ----------- | --------- | --------- |');
   for (const m of models) {
     const url = m.scadRel.replace('models/', '');
     const parts = url.split('/');
@@ -377,7 +379,8 @@ function renderModelsTable(models: ModelMeta[]): string {
     const p2 = m.previews[1] ? `![${m.previews[1].name}](${m.previews[1].rel.replace('models/', '')})` : '—';
     const p3 = m.previews[2] ? `![${m.previews[2].name}](${m.previews[2].rel.replace('models/', '')})` : '—';
     const p4 = m.previews[3] ? `![${m.previews[3].name}](${m.previews[3].rel.replace('models/', '')})` : '—';
-    lines.push(`| ${infoCell} | ${p1} ${p2} | ${p3} ${p4} |`);
+    const descCell = m.description ? m.description : '—';
+    lines.push(`| ${infoCell} | ${descCell} | ${p1} ${p2} | ${p3} ${p4} |`);
   }
   lines.push('');
   return lines.join('\n');

@@ -4,6 +4,9 @@
 // Author: Cascade generator
 // =============================================
 
+// Short description for models table
+description = "Audio Tools Case — base";
+
 // ----------------------------
 // Настройка точности
 // ----------------------------

@@ -16,6 +16,9 @@
 В начале создай README.md модели, опиши все фрагменты.
 Потом создай scad файл модели.
 
+Add variable `description = "";` in the top of scad file.
+Write one line short description to var.
+
 ### Команды сборки и разработки
 - **Предварительный просмотр в GUI**: `openscad 2025-08-24-ecig-platform/ecig-platform.scad`
 - **Экспорт STL**: `openscad -o 2025-08-24-ecig-platform/ecig-platform.stl 2025-08-24-ecig-platform/ecig-platform.scad`

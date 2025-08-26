@@ -4,6 +4,9 @@
 // Author: ChatGPT (OpenSCAD)
 // =============================================
 
+// Short description for models table
+description = "Circular Plate Cap Ø123.6 (shell 1 mm, height 5 mm)";
+
 // ----------------------------
 // Настройка точности
 // ----------------------------

@@ -4,6 +4,9 @@
 // Author: ChatGPT (OpenSCAD)
 // =============================================
 
+// Short description for models table
+description = "Ceiling Corner Support for Printer Frame";
+
 // ----------------------------
 // Описание модулей (фрагментов)
 // ----------------------------

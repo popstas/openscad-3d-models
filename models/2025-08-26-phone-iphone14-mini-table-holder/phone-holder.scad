@@ -4,6 +4,9 @@
 // Author: generator
 // =============================================
 
+// Short description for models table
+description = "phone iphone14 mini table holder — base";
+
 // ----------------------------
 // Настройка точности
 // ----------------------------

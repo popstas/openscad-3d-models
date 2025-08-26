@@ -1,5 +1,8 @@
 // MODEL_VERSION = "v1.3.1"  // обновляйте номер при изменениях
 
+// Short description for models table
+description = "ECig platform stand with oval cup";
+
 // ====================== Точность рендера ======================
 $fn = 0;        // фиксированную сегментацию отключаем
 $fa = 6;        // 5–8° обычно достаточно
