@@ -63,7 +63,7 @@ yellow_w     = 67.5;
 green_w      = 37;
 
 // Глубина по Y (внутренняя) — ТРЕБУЕТСЯ подтверждение
-inner_y      = 140;        // TODO: уточнить фактическую длину по Y
+inner_y      = 158.6;        // фактическая длина по Y
 inner_h      = 31;         // внутренняя высота во всех отсеках (максимум)
 
 // Скругление наружного прямоугольника
@@ -94,6 +94,11 @@ inner_x_shift = inner_x - wall_th;
 module rr2d(size=[10,10], r=2){
     sx = size[0]; sy = size[1];
     offset(r=r) square([max(sx-2*r, tiny), max(sy-2*r, tiny)], center=false);
+}
+
+// Базовый контур корпуса для оффсетов
+module base_outline2d(){
+    rr2d([outer_x, outer_y], r=radius_r);
 }
 
 // ----------------------------
@@ -155,21 +160,36 @@ module base(){
 // Крышка состоит из:
 // - верхней пластины толщиной cap_top_th, размерами больше корпуса на cap_outer_margin с каждой стороны
 // - внутренней юбки высотой cap_lip_h, которая надевается на корпус с зазором cap_fit_clearance
+// Компоненты крышки вынесены в отдельные модули: cap_pad, cap_skirt, cap_skirt_inner
+
+// Верхняя пластина крышки
+module cap_pad(){
+    linear_extrude(height=cap_top_th)
+        rr2d([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
+}
+
+// Наружная юбка (тело)
+module cap_skirt(){
+    linear_extrude(height=cap_lip_h)
+        rr2d([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
+}
+
+// Внутренняя выемка юбки (для difference)
+module cap_skirt_inner(){
+    translate([0,0,-tiny])
+        linear_extrude(height=cap_lip_h + 2*tiny)
+            rr2d([outer_x + 2*cap_fit_clearance, outer_y + 2*cap_fit_clearance], r=radius_r + cap_fit_clearance);
+}
 module cap(){
     union(){
         // Верхняя пластина
-        linear_extrude(height=cap_top_th)
-            rr2d([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
+        cap_pad();
 
         // Юбка под верхней пластиной
         difference(){
-            linear_extrude(height=cap_lip_h)
-                rr2d([outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin], r=radius_r + cap_outer_margin);
-
+            cap_skirt();
             // Внутренняя поверхность юбки: чуть больше, чем наружный размер корпуса, на зазор
-            translate([0,0,-tiny])
-                linear_extrude(height=cap_lip_h + 2*tiny)
-                    rr2d([outer_x + 2*cap_fit_clearance, outer_y + 2*cap_fit_clearance], r=radius_r + cap_fit_clearance);
+            cap_skirt_inner();
         }
     }
 }
