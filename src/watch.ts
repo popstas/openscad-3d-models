@@ -361,8 +361,8 @@ function renderModelsTable(models: ModelMeta[]): string {
   const lines: string[] = [];
   lines.push('# Models');
   lines.push('');
-  lines.push('| Info | Previews |');
-  lines.push('| ---- | -------- |');
+  lines.push('| Info | Preview 1 | Preview 2 |');
+  lines.push('| ---- | --------- | --------- |');
   for (const m of models) {
     const url = m.scadRel.replace('models/', '');
     const parts = url.split('/');
@@ -373,14 +373,9 @@ function renderModelsTable(models: ModelMeta[]): string {
     const dirLink = folder ? `[${folder}](${folder}/)` : '';
     const fileLink = file ? `[${file}](${url})` : '';
     const infoCell = `<strong>${m.name}</strong><br>${date}<br>${dirLink}<br>${fileLink}`;
-    const imgTags = m.previews.map(p => {
-      const rel = p.rel.replace('models/', '');
-      const alt = p.name;
-      return `<img src="${rel}" alt="${alt}" style="max-width:300px;height:auto;"/>`;
-    });
-    const cells = [imgTags[0] || '&nbsp;', imgTags[1] || '&nbsp;', imgTags[2] || '&nbsp;', imgTags[3] || '&nbsp;'];
-    const previewsGrid = `<table><tr><td>${cells[0]}</td><td>${cells[1]}</td></tr><tr><td>${cells[2]}</td><td>${cells[3]}</td></tr></table>`;
-    lines.push(`| ${infoCell} | ${previewsGrid} |`);
+    const p1 = m.previews[0] ? `![${m.previews[0].name}](${m.previews[0].rel.replace('models/', '')})` : '—';
+    const p2 = m.previews[1] ? `![${m.previews[1].name}](${m.previews[1].rel.replace('models/', '')})` : '—';
+    lines.push(`| ${infoCell} | ${p1} | ${p2} |`);
   }
   lines.push('');
   return lines.join('\n');
