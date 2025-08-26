@@ -6,7 +6,8 @@
   "scripts": {
     "watch": "node --watch --env-file=.env --import tsx src/watch.ts",
     "build": "tsc -p .",
-    "test": "echo \"No tests\""
+    "test": "echo \"No tests\"",
+    "create-project": "node --import tsx src/create-project.ts"
   },
   "keywords": [],
   "author": "",

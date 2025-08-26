@@ -6,21 +6,7 @@ A collection of small, self‑contained OpenSCAD models organized by date and sl
 - OpenSCAD (GUI or CLI)
 - macOS/Linux/Windows. For Windows paths, set the binary in `.env`.
 
-## Quick start
-- Preview a model (GUI): `openscad 2025-08-24-ecig-platform/ecig-platform.scad`
-- Export STL (CLI): `openscad -o out.stl path/to/model.scad`
-- Batch render all up‑to‑date STLs: `./compile-stl.sh`
-  - Configure `.env`: `openscad_path=D:\prog\_3d\OpenSCAD\openscad.exe`
-
-## Project layout
-- `YYYY-MM-DD-short-slug/` — one folder per model
-  - `model-name.scad` — primary OpenSCAD source
-  - `model-name.stl` — optional export (may be git‑ignored)
-- `compile-stl.sh` — rebuilds `.stl` when `.scad` is newer
-- `AGENTS.md` — contributor guidelines
-
 ## Environment (.env)
-- __Purpose__: Configure the OpenSCAD binary used by `compile-stl.sh`.
 - __Setup__: Copy `.env.example` to `.env` and set `openscad_path`.
 
 Example `.env`:
@@ -30,13 +16,28 @@ openscad_path=C:/Program Files/OpenSCAD/openscad.exe
 # openscad_path=/Applications/OpenSCAD-2021.1.app/Contents/MacOS/openscad
 ```
 
+## Create a new project
+```bash
+npm run create-project
+```
+
+Then ask the agent to create scad code for the project. Add your photos, descriptions, sizes, etc.
+
+Example:
+```bash
+npm run create-project printer-ceiling-support printer-ceiling
+```
+
+
+## Project layout
+- `YYYY-MM-DD-short-slug/` — one folder per model
+  - `model-name.scad` — primary OpenSCAD source
+  - `model-name.stl` — optional export (may be git‑ignored)
+- `AGENTS.md` — contributor guidelines
+
 - __Windows notes__:
   - Do not add quotes. Use either forward slashes `C:/...` or plain Windows paths with spaces (quotes are not needed).
   - The script prints which binary it will use: `Using OpenSCAD: ...`.
-- __Override without .env__: set `OPENSCAD_CMD` for a one-off run, e.g.
-  ```bash
-  OPENSCAD_CMD="C:/Program Files/OpenSCAD/openscad.exe" ./compile-stl.sh
-  ```
 - __Git__: `.env` is ignored by Git (see `.gitignore`).
 
 ## Conventions
