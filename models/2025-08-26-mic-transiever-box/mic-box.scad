@@ -37,14 +37,14 @@ inner_x = 100;               // внутренняя длина (X)
 inner_y = 35;                // внутренняя ширина (Y)
 inner_h = 31;                // внутренняя высота (Z)
 
-wall_th    = 1.6;            // толщина стенок основания
-bottom_th  = 1.6;            // толщина дна основания
+wall_th    = 2;            // толщина стенок основания
+bottom_th  = 2;            // толщина дна основания
 corner_r   = 3.0;            // радиус скругления внутренних углов
 
 // Крышка (накладная)
 fit_clearance = 0.1;        // зазор на посадку (каждая сторона по радиусу/по XY)
-cap_wall_th   = 1.0;         // толщина стенок крышки
-cap_top_th    = 1;         // толщина верха крышки
+cap_wall_th   = 1;         // толщина стенок крышки
+cap_top_th    = 2;         // толщина верха крышки
 cap_lip_h     = 5.0;        // глубина посадочного борта крышки (внутрь)
 
 // Выбор вывода
@@ -151,6 +151,11 @@ module cap_shell(){
 // Главные детали
 module base(){ base_body(); }
 module cap(){ cap_shell(); }
+module cap_upside_down(){
+    translate([0, 0, cap_h])
+        mirror([0, 0, 1])
+            cap_shell();
+}
 
 // ---------------
 // Клиппер фрагментов
@@ -191,5 +196,9 @@ if(test_fragment){
     clip_for_fragments(){ base(); }{ cap(); }
 }else{
     if (print_base) base();
-    if (print_cap) translate([0, base_outer_y + 10, 0]) cap();
+    if (print_cap) {
+        // translate([0, base_outer_y + 10, 0]) cap();
+        // translate([cap_outer_x + 10, base_outer_y + 10, 0]) cap_upside_down();
+        translate([0, base_outer_y + 10, 0]) cap_upside_down();
+    }
 }
