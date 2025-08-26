@@ -2,6 +2,8 @@
 
 A collection of small, self‑contained OpenSCAD models organized by date and slug. Each folder contains the source `.scad` and, optionally, exported `.stl` files.
 
+[All models index with previews](models.md)
+
 ## Requirements
 - OpenSCAD (GUI or CLI)
 - macOS/Linux/Windows. For Windows paths, set the binary in `.env`.

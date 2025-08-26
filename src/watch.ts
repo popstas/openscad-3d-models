@@ -15,6 +15,10 @@ function toPng(scadPath: string, view: string): string {
   return scadPath.replace(/\.scad$/i, `.preview.${view}.png`);
 }
 
+function toPosixRel(p: string): string {
+  return path.relative(ROOT, p).split(path.sep).join('/');
+}
+
 function statSafe(p: string): fs.Stats | null {
   try { return fs.statSync(p); } catch { return null; }
 }
@@ -138,6 +142,7 @@ async function compileAll(): Promise<void> {
   }
   console.log(`Done. Total: ${scads.length}, built: ${built}, skipped: ${skipped}, failed: ${failed}`);
   if (failed > 0) process.exitCode = 1;
+  await generateModelsMd();
 }
 
 // Per-file debounce to rebuild only the changed file
@@ -146,7 +151,10 @@ function scheduleFile(scadFile: string) {
   if (fileTimers.has(scadFile)) clearTimeout(fileTimers.get(scadFile)!);
   const timer = setTimeout(() => {
     fileTimers.delete(scadFile);
-    void buildIfOutdated(scadFile);
+    void (async () => {
+      await buildIfOutdated(scadFile);
+      await generateModelsMd();
+    })();
   }, THROTTLE_MS);
   fileTimers.set(scadFile, timer);
 }
@@ -251,3 +259,106 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+// ======================= models.md generation =======================
+type ModelMeta = {
+  name: string;
+  description: string;
+  scadRel: string; // posix relative path to .scad
+  previews: { name: string; rel: string }[]; // existing preview PNGs
+};
+
+function extractModelName(source: string): { name: string; description: string } {
+  // Find line starting with // 3D:
+  const re = /^\s*\/\/\s*3D:\s*(.+)\s*$/im;
+  const m = source.match(re);
+  if (!m) return { name: '', description: '' };
+  const full = m[1].trim();
+  // We only have a single string; use it as the name, leave description empty
+  return { name: full, description: '' };
+}
+
+function readTextSafe(file: string): string | null {
+  try { return fs.readFileSync(file, 'utf8'); } catch { return null; }
+}
+
+function collectModelMeta(scadFile: string): ModelMeta | null {
+  const txt = readTextSafe(scadFile);
+  if (txt == null) return null;
+  const { name, description } = extractModelName(txt);
+  const baseName = path.basename(scadFile, '.scad');
+  const finalName = name || baseName;
+  const scadRel = toPosixRel(scadFile);
+  // Collect any previews of pattern <basename>.preview.*.png in the same folder
+  const previews: { name: string; rel: string }[] = [];
+  try {
+    const dir = path.dirname(scadFile);
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      if (!e.isFile()) continue;
+      const fname = e.name;
+      const lc = fname.toLowerCase();
+      if (lc.startsWith(baseName.toLowerCase() + '.preview.') && lc.endsWith('.png')) {
+        const full = path.join(dir, fname);
+        const view = fname.slice((baseName + '.preview.').length, fname.length - '.png'.length);
+        previews.push({ name: view, rel: toPosixRel(full) });
+      }
+    }
+    // Stable sort by preview name
+    previews.sort((a, b) => a.name.localeCompare(b.name));
+  } catch {}
+  return { name: finalName, description: description || '', scadRel, previews };
+}
+
+function renderModelsTable(models: ModelMeta[]): string {
+  const lines: string[] = [];
+  lines.push('# Models');
+  lines.push('');
+  lines.push('| Name | URL | Description | Previews |');
+  lines.push('| ---- | --- | ----------- | -------- |');
+  for (const m of models) {
+    const url = m.scadRel;
+    const previews = m.previews.map(p => `![${p.name}](${p.rel})`).join(' ');
+    lines.push(`| ${m.name} | [${url}](${url}) | ${m.description} | ${previews} |`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+function renderModelsList(models: ModelMeta[]): string {
+  const lines: string[] = [];
+  lines.push('# Models');
+  lines.push('');
+  for (const m of models) {
+    lines.push(`## ${m.name}`);
+    const url = m.scadRel;
+    lines.push(`- URL: [${url}](${url})`);
+    lines.push(`- Description: ${m.description || ''}`);
+    if (m.previews.length) {
+      lines.push(`- Previews: ${m.previews.map(p => `[${p.name}](${p.rel})`).join(' ')}`);
+    } else {
+      lines.push(`- Previews: —`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+async function generateModelsMd(): Promise<void> {
+  try {
+    const scads = listScadFiles(ROOT)
+      .filter(p => p.toLowerCase().endsWith('.scad'))
+      .sort((a, b) => toPosixRel(a).localeCompare(toPosixRel(b)));
+    const models: ModelMeta[] = [];
+    for (const s of scads) {
+      const meta = collectModelMeta(s);
+      if (meta) models.push(meta);
+    }
+    const md = renderModelsTable(models);
+    const outFile = path.join(ROOT, 'models.md');
+    fs.writeFileSync(outFile, md, 'utf8');
+    console.log('Updated models.md');
+  } catch (e) {
+    console.warn('Failed to update models.md:', (e as Error).message);
+  }
+}
