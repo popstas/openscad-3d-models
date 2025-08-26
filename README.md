@@ -25,6 +25,11 @@ npm run create-project
 
 Then ask the agent to create scad code for the project. Add your photos, descriptions, sizes, etc.
 
+At the top of your new `.scad` file, include shared modules:
+```scad
+use <../modules.scad>;
+```
+
 Example:
 ```bash
 npm run create-project printer-ceiling-support printer-ceiling
