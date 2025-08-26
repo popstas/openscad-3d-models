@@ -2,7 +2,7 @@
 
 A collection of small, self‑contained OpenSCAD models organized by date and slug. Each folder contains the source `.scad` and, optionally, exported `.stl` files.
 
-[All models index with previews](models.md)
+[All models index with previews at /models/ dir](models/README.md)
 
 ## Requirements
 - OpenSCAD (GUI or CLI)

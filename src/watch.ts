@@ -235,13 +235,14 @@ function ensureDirWatcher(dir: string) {
 }
 
 function primeWatchers() {
+  const modelsPath = path.join(ROOT, 'models');
   // Root directory watcher
-  ensureDirWatcher(ROOT);
+  ensureDirWatcher(modelsPath);
   // All subdirectories (excluding ignored)
-  const dirs = listDirs(ROOT);
+  const dirs = listDirs(modelsPath);
   for (const d of dirs) ensureDirWatcher(d);
   // Start polling existing .scad files
-  for (const f of listScadFiles(ROOT)) watchFileIfNeeded(f);
+  for (const f of listScadFiles(modelsPath)) watchFileIfNeeded(f);
   console.log(`fs.watch ready. Dirs: ${dirWatchers.size}, files: ${watchedFiles.size}, pollInterval: ${WATCH_FILE_INTERVAL}ms`);
 }
 
@@ -355,7 +356,7 @@ async function generateModelsMd(): Promise<void> {
       if (meta) models.push(meta);
     }
     const md = renderModelsTable(models);
-    const outFile = path.join(ROOT, 'models.md');
+    const outFile = path.join(ROOT, 'models', 'README.md');
     fs.writeFileSync(outFile, md, 'utf8');
     console.log('Updated models.md');
   } catch (e) {
