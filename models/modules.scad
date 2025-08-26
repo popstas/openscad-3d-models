@@ -1,6 +1,6 @@
 // =============================================
 // Base reusable functions and modules for models
-// Version: 1.1
+// Version: 1.2
 // =============================================
 
 // Short description for models table (library file)
@@ -166,8 +166,32 @@ module rounded_rect_extrude_bottom_chamfer(size=[10,10], r=2, h=5, chz=0.8, chx=
 }
 
 // -------------------------------------------------
-// 3D: Rings and chamfers
+// 3D: Rect shells, trays, rings and chamfers
 // -------------------------------------------------
+// rr_extrude(size=[x,y], r, h) — sugar for linear_extrude(rounded_rect)
+module rr_extrude(size=[10,10], r=2, h=5){
+    linear_extrude(height=h) rounded_rect(size, r);
+}
+
+// rr_shell(size=[x,y], r, h, wall) — rectangular rounded shell of thickness wall
+module rr_shell(size=[20,20], r=2, h=10, wall=2){
+    difference(){
+        rr_extrude(size=size, r=r, h=h);
+        translate([0,0,-eps()])
+            rr_extrude(size=[max(size[0]-2*wall, eps()), max(size[1]-2*wall, eps())], r=max(r-wall,0), h=h+2*eps());
+    }
+}
+
+// rr_tray(outer=[x,y], outer_r, outer_h, inner=[x,y], inner_r, bottom_th)
+// Makes a rectangular rounded tray: outer body minus inner cavity that starts at bottom_th
+module rr_tray(outer=[40,30], outer_r=3, outer_h=20, inner=[36,26], inner_r=2, bottom_th=2){
+    difference(){
+        rr_extrude(size=outer, r=outer_r, h=outer_h);
+        translate([0,0,bottom_th - eps()])
+            rr_extrude(size=inner, r=inner_r, h=max(outer_h - bottom_th + 2*eps(), eps()));
+    }
+}
+
 // chamfer_ring(d_outer, d_inner, h, chamfer)
 // Cylindrical ring of height h with a top outward chamfer of size chamfer.
 module chamfer_ring(d_outer, d_inner, h, chamfer){
@@ -199,6 +223,23 @@ module cyl_bar_y(xc, zc, r, h){
 module chamfer_wedge_y(ch, len_y){
     linear_extrude(height=len_y)
         polygon(points=[[0,0],[ch,0],[0,ch]]);
+}
+
+// fragment clipper by bounding box at origin
+// clip_for_fragments_bbox(L, W, H, enabled=false, frag_size=20, frag_index=0, frag_h_extra=20)
+// Intersects children() with a corner cube of size frag_size at one of 4 corners of the LxW footprint, extended by H along Z.
+// Use when your part's bounding box is aligned to origin [0,0]..[L,W].
+module clip_for_fragments_bbox(L, W, H, enabled=false, frag_size=20, frag_index=0, frag_h_extra=20){
+    if (enabled){
+        ofs = corner_offset(frag_index, L, W, frag_size);
+        intersection(){
+            children();
+            translate([ofs[0], ofs[1], -frag_h_extra])
+                cube([frag_size, frag_size, H + 2*frag_h_extra], center=false);
+        }
+    } else {
+        children();
+    }
 }
 
 // -------------------------------------------------

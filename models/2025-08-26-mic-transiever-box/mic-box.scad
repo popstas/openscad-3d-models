@@ -87,34 +87,7 @@ cap_h = cap_top_th + cap_lip_h;
 // ----------------------------
 // Вспомогательные функции/модули
 // ----------------------------
-function clamp(val, lo, hi) = max(lo, min(val, hi));
-function clamp_chz(t, chz) = clamp(chz, 0, t/2);
-function clamp_chxy(l,w,chx,chy) = [clamp(chx, 0, l/2 - eps()), clamp(chy, 0, w/2 - eps())];
-
-// Экструзия скруглённого прямоугольника с фаской снизу (симметрия по X/Y)
-module chamfered_rr_bottom_edges_sym(size=[10,10], r=2, h=5, chz=0.8, chx=0.8, chy=0.8){
-    sx = size[0]; sy = size[1];
-    chz2 = clamp_chz(h, chz);
-    chxy = clamp_chxy(sx, sy, chx, chy);
-    chx2 = chxy[0];
-    chy2 = chxy[1];
-
-    if (chz2 <= 0 || (chx2 <= 0 && chy2 <= 0)) {
-        linear_extrude(height=h) rounded_rect([sx, sy], r);
-    } else {
-        union(){
-            // верхнее тело
-            translate([0,0,chz2])
-                linear_extrude(height=h - chz2)
-                    rounded_rect([sx, sy], r);
-            // нижняя фаска (аппрокс. масштабом из центра)
-            //r2 = max(r - min(chx2, chy2), tiny);
-            //translate([sx/2, sy/2, 0])
-            //    linear_extrude(height=chz2, scale=[sx/max(sx - 2*chx2, tiny), sy/max(sy - 2*chy2, tiny)])
-            //        rr2d_centered([max(sx - 2*chx2, tiny), max(sy - 2*chy2, tiny)], r2);
-        }
-    }
-}
+// Используются общие утилиты из ../modules.scad
 
 // ----------------------------
 // Фрагменты детали
@@ -122,7 +95,7 @@ module chamfered_rr_bottom_edges_sym(size=[10,10], r=2, h=5, chz=0.8, chx=0.8, c
 module base_body(){
     difference(){
         // внешний корпус основания с фаской снизу
-        chamfered_rr_bottom_edges_sym([base_outer_x, base_outer_y], base_outer_r, base_outer_h, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
+        rounded_rect_extrude_bottom_chamfer([base_outer_x, base_outer_y], base_outer_r, base_outer_h, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
         // внутренняя полость
         translate([0,0,bottom_th - eps()])
             linear_extrude(height=inner_h + 2*eps())
@@ -133,7 +106,7 @@ module base_body(){
 module cap_shell(){
     difference(){
         // внешний объём крышки (без фаски сверху; опционально фаску снизу)
-        chamfered_rr_bottom_edges_sym([cap_outer_x, cap_outer_y], cap_outer_r, cap_h, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
+        rounded_rect_extrude_bottom_chamfer([cap_outer_x, cap_outer_y], cap_outer_r, cap_h, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
         // внутренняя полость на глубину борта
         translate([0,0,0])
             linear_extrude(height=cap_lip_h + eps())
@@ -149,15 +122,6 @@ module cap_upside_down(){
         mirror([0, 0, 1])
             cap_shell();
 }
-
-// ---------------
-// Клиппер фрагментов
-// ---------------
-function corner_offset(ix, L, W, s) =
-    (ix == 0) ? [0, 0] :
-    (ix == 1) ? [0, max(W - s, 0)] :
-    (ix == 2) ? [max(L - s, 0), 0] :
-                [max(L - s, 0), max(W - s, 0)];
 
 module clip_for_fragments(){
     if(test_fragment){

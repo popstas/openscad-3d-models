@@ -117,8 +117,7 @@ module inner_cavity(){
 
 // Базовый заполняющий объём (без вырезов) — внешний контур на полную высоту
 module base_fill(){
-    linear_extrude(height=outer_h)
-        rounded_rect([outer_x, outer_y], r=radius_r);
+    rr_extrude(size=[outer_x, outer_y], r=radius_r, h=outer_h);
 }
 
 section_x_offset = wall_th/2;
@@ -196,16 +195,9 @@ module cap(){
 // Клиппер фрагментов
 // ---------------
 module clip_for_fragments(){
-    if(test_fragment){
-        // 4 угловых выреза по frag_index
-        x0 = (frag_index==0 || frag_index==1) ? 0 : (outer_x - frag_size);
-        y0 = (frag_index==0 || frag_index==2) ? 0 : (outer_y - frag_size);
-        intersection(){
-            children(0);
-            translate([x0, y0, -frag_h_extra])
-                cube([frag_size, frag_size, outer_h + 2*frag_h_extra]);
-        }
-    } else { children(); }
+    clip_for_fragments_bbox(L=outer_x, W=outer_y, H=outer_h,
+        enabled=test_fragment, frag_size=frag_size, frag_index=frag_index, frag_h_extra=frag_h_extra)
+    children();
 }
 
 // ----------------------------
