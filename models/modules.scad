@@ -169,8 +169,25 @@ module rr_extrude(size=[10,10], r=2, h=5){
     linear_extrude(height=h) rounded_rect(size, r);
 }
 
-module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7){
-    linear_extrude(height=h, scale=s, slices=30) rounded_rect(size, r);
+module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7, mink_r=0){
+    if (mink_r > 0){
+        // Preserve outer size/height by pre-insetting and post-minkowski with a sphere
+        sx = size[0]; sy = size[1];
+        m = mink_r;
+        sx2 = max(sx - 2*m, eps());
+        sy2 = max(sy - 2*m, eps());
+        r2 = max(r - m, 0);
+        h2 = max(h - 2*m, eps());
+        // Shift so final bbox matches [0..sx, 0..sy, 0..h]
+        translate([m, m, m])
+            minkowski(){
+              linear_extrude(height=h2, scale=s, slices=30)
+                rounded_rect([sx2, sy2], r2);
+              sphere(r=m, $fs=fs_pin(pin_fs), $fa=6);
+            }
+    } else {
+        linear_extrude(height=h, scale=s, slices=30) rounded_rect(size, r);
+    }
 }
 
 module chamfer_rr_extrude(size=[10,10], h=5, r=2, ch=1) {
