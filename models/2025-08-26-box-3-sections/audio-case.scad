@@ -9,7 +9,7 @@ description = "Audio Tools Case — base";
 version_str = "1.0";
 
 // Shared library
-use <../modules.scad>
+use <../modules.scad>;
 
 // ----------------------------
 // Настройка точности
@@ -60,12 +60,23 @@ bottom_th    = 2;          // толщина дна
 
 // Ширины отсеков (по X)
 red_w        = 10;//30;
-yellow_w     = 10;//67.5;
-green_w      = 10;//37;
+yellow_w     = 20;//67.5;
+green_w      = 30;//37;
+sections_w = [red_w, yellow_w, green_w];
 
-// Глубина по Y (внутренняя)
-inner_y      = 10;//158.6;        // фактическая длина по Y
-inner_h      = 10;//31;         // внутренняя высота во всех отсеках (максимум)
+// Поправки размеров (фактические измерения)
+sec_w_delta  = 1;      // каждая секция по X на 1 мм уже
+inner_y_delta= 2.5;    // внутренняя глубина по Y меньше на 2.5 мм
+
+// Глубина по Y (внутренняя, номинал)
+inner_y      = 20;//158.6;        // номинальная длина по Y
+inner_h      = 15;//31;           // внутренняя высота во всех отсеках (максимум)
+
+// Эффективные размеры с учётом поправок
+red_w_e    = red_w    + sec_w_delta;
+yellow_w_e = yellow_w + sec_w_delta;
+green_w_e  = green_w  + sec_w_delta;
+inner_y_e  = inner_y  + inner_y_delta;
 
 // Скругление наружного прямоугольника
 radius_r     = 3;          // радиус скругления углов
@@ -82,7 +93,7 @@ cap_outer_margin  = 0.8;   // выступ крышки наружу относ�
 cap_minkowski_r  = 2;   // радиус скругления краёв крышки через minkowski
 base_minkowski_r = 2;   // радиус скругления краёв основания через minkowski
 
-inner_y_shift = inner_y - wall_th;
+inner_y_shift = inner_y_e - wall_th;
 cap_h = cap_top_th + cap_lip_h;   // итоговая высота крышки
 
 // ----------------------------
@@ -100,7 +111,7 @@ module base_outline2d(){
 // ----------------------------
 // Геометрия корпуса
 // ----------------------------
-outer_x = 2*wall_th + red_w + divider_th + yellow_w + divider_th + green_w;
+outer_x = 2*wall_th + red_w_e + divider_th + yellow_w_e + divider_th + green_w_e;
 outer_y = 2*wall_th + inner_y_shift;
 outer_h = bottom_th + inner_h;
 
@@ -122,17 +133,17 @@ section_y = wall_th+wall_th/2;
 // Три выреза-отсека. Их суммарная ширина и позиции оставляют наружные стены и две перегородки толщиной divider_th.
 module section_red(){
     translate([section_x_offset, section_y, bottom_th])
-        rr_extrude(size=[red_w, inner_y_shift], r=sec_corner_r, h=inner_h);
+        rr_extrude(size=[red_w_e, inner_y_shift], r=sec_corner_r, h=inner_h);
 }
 
 module section_yellow(){
-    translate([section_x_offset + red_w + divider_th, section_y, bottom_th])
-        rr_extrude(size=[yellow_w, inner_y_shift], r=sec_corner_r, h=inner_h);
+    translate([section_x_offset + red_w_e + divider_th, section_y, bottom_th])
+        rr_extrude(size=[yellow_w_e, inner_y_shift], r=sec_corner_r, h=inner_h);
 }
 
 module section_green(){
-    translate([section_x_offset + red_w + divider_th + yellow_w + divider_th, section_y, bottom_th])
-        rr_extrude(size=[green_w, inner_y_shift], r=sec_corner_r, h=inner_h);
+    translate([section_x_offset + red_w_e + divider_th + yellow_w_e + divider_th, section_y, bottom_th])
+        rr_extrude(size=[green_w_e, inner_y_shift], r=sec_corner_r, h=inner_h);
 }
 
 module base(){
