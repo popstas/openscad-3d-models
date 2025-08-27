@@ -25,10 +25,10 @@
 
 ## Превью
 
-![cup-cap iso-p](cup-cap-76.preview.iso-p.png)
+![iso](preview.iso.png)
 
-![cup-cap xy-o](cup-cap-76.preview.xy-o.png)
+![xy](preview.xy.png)
 
-![cup-cap xz-p](cup-cap-76.preview.xz-p.png)
+![xz](preview.xz.png)
 
-![cup-cap yz-p](cup-cap-76.preview.yz-p.png)
+![yz](preview.yz.png)

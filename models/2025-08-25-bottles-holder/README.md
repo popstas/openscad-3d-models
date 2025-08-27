@@ -68,3 +68,13 @@ max_h         = 50;         // максимум по Z
 
 ## Лицензия
 MIT
+
+## Превью
+
+![iso](preview.iso.png)
+
+![xy](preview.xy.png)
+
+![xz](preview.xz.png)
+
+![yz](preview.yz.png)

@@ -29,10 +29,10 @@
 
 ## Превью
 
-![phone-holder iso-p](phone-holder.preview.iso-p.png)
+![iso](preview.iso.png)
 
-![phone-holder xy-o](phone-holder.preview.xy-o.png)
+![xy](preview.xy.png)
 
-![phone-holder xz-p](phone-holder.preview.xz-p.png)
+![xz](preview.xz.png)
 
-![phone-holder yz-p](phone-holder.preview.yz-p.png)
+![yz](preview.yz.png)

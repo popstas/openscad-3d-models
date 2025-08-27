@@ -59,10 +59,10 @@ MIT
 
 ## Превью
 
-![case-5 iso-p](case-5.preview.iso-p.png)
+![iso](preview.iso.png)
 
-![case-5 xy-o](case-5.preview.xy-o.png)
+![xy](preview.xy.png)
 
-![case-5 xz-p](case-5.preview.xz-p.png)
+![xz](preview.xz.png)
 
-![case-5 xy-p](case-5.preview.xy-p.png)
+![yz](preview.yz.png)

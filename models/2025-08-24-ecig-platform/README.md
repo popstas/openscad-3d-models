@@ -191,10 +191,10 @@ manual_outer_taper_total_y = 10.0; // Меньше сужение по Y
 
 ## Превью
 
-![ecig-platform iso-p](ecig-platform.preview.iso-p.png)
+![iso](preview.iso.png)
 
-![ecig-platform xy-o](ecig-platform.preview.xy-o.png)
+![xy](preview.xy.png)
 
-![ecig-platform xz-p](ecig-platform.preview.xz-p.png)
+![xz](preview.xz.png)
 
-![ecig-platform xy-p](ecig-platform.preview.xy-p.png)
+![yz](preview.yz.png)

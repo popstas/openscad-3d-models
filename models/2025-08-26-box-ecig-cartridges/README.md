@@ -33,10 +33,10 @@
 
 ## Превью
 
-![ecig-cartridges iso-p](ecig-cartridges.preview.iso-p.png)
+![iso](preview.iso.png)
 
-![ecig-cartridges xy-o](ecig-cartridges.preview.xy-o.png)
+![xy](preview.xy.png)
 
-![ecig-cartridges xz-p](ecig-cartridges.preview.xz-p.png)
+![xz](preview.xz.png)
 
-![ecig-cartridges yz-p](ecig-cartridges.preview.yz-p.png)
+![yz](preview.yz.png)

@@ -15,7 +15,9 @@ function toStl(scadPath: string): string {
 }
 
 function toPng(scadPath: string, view: string): string {
-  return scadPath.replace(/\.scad$/i, `.preview.${view}.png`);
+  // New naming: place alongside .scad with filename 'preview.<view>.png'
+  const dir = path.dirname(scadPath);
+  return path.join(dir, `preview.${view}.png`);
 }
 
 function toPosixRel(p: string): string {
@@ -57,11 +59,11 @@ async function render(scad: string, stl: string): Promise<void> {
 type CamView = { name: string; camera: string; projection: 'o' | 'p' };
 const PNG_VIEWS: CamView[] = [
   // --camera = tx,ty,tz,rx,ry,rz,dist ; --viewall will frame the model
-  // Names encode plane + projection: xy-o (orthographic XY top), xz-p (perspective XZ), iso-p (isometric-like perspective)
-  { name: 'iso-p', camera: '0,0,0,55,0,25,500', projection: 'p' },
-  { name: 'xy-o',  camera: '0,0,0,0,0,0,500',   projection: 'o' },
-  { name: 'xz-p',  camera: '0,0,0,90,0,0,500',  projection: 'p' },
-  { name: 'yz-p',  camera: '0,0,0,0,90,0,500',  projection: 'p' },
+  // Names simplified: iso (isometric-like perspective), xy (orthographic top), xz, yz
+  { name: 'iso', camera: '0,0,0,55,0,25,500', projection: 'p' },
+  { name: 'xy',  camera: '0,0,0,0,0,0,500',   projection: 'o' },
+  { name: 'xz',  camera: '0,0,0,90,0,0,500',  projection: 'p' },
+  { name: 'yz',  camera: '0,0,0,0,90,0,500',  projection: 'p' },
 ];
 
 function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
@@ -368,7 +370,7 @@ function collectModelMeta(scadFile: string): ModelMeta | null {
   const baseName = path.basename(scadFile, '.scad');
   const finalName = name || baseName;
   const scadRel = toPosixRel(scadFile);
-  // Collect any previews of pattern <basename>.preview.*.png in the same folder
+  // Collect any previews of pattern preview.*.png in the same folder (new naming)
   const previews: { name: string; rel: string }[] = [];
   try {
     const dir = path.dirname(scadFile);
@@ -377,9 +379,9 @@ function collectModelMeta(scadFile: string): ModelMeta | null {
       if (!e.isFile()) continue;
       const fname = e.name;
       const lc = fname.toLowerCase();
-      if (lc.startsWith(baseName.toLowerCase() + '.preview.') && lc.endsWith('.png')) {
+      if (lc.startsWith('preview.') && lc.endsWith('.png')) {
         const full = path.join(dir, fname);
-        const view = fname.slice((baseName + '.preview.').length, fname.length - '.png'.length);
+        const view = fname.slice('preview.'.length, fname.length - '.png'.length);
         previews.push({ name: view, rel: toPosixRel(full) });
       }
     }

@@ -49,3 +49,13 @@ openscad -o mic-box-cap.stl \
 
 ## License
 MIT
+
+## Превью
+
+![iso](preview.iso.png)
+
+![xy](preview.xy.png)
+
+![xz](preview.xz.png)
+
+![yz](preview.yz.png)

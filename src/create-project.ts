@@ -59,12 +59,12 @@ function main() {
   const scadName = `${shortSlug}.scad`;
   const readmeName = 'README.md';
 
-  const previewBase = `${shortSlug}.preview`;
+  // New naming: preview.<view>.png (no slug prefix, simplified view names)
   const previews = [
-    `${previewBase}.iso-p.png`,
-    `${previewBase}.xy-o.png`,
-    `${previewBase}.xz-p.png`,
-    `${previewBase}.yz-p.png`,
+    `preview.iso.png`,
+    `preview.xy.png`,
+    `preview.xz.png`,
+    `preview.yz.png`,
   ];
 
   const scadPath = path.join(modelDir, scadName);
@@ -143,7 +143,7 @@ module clip_for_fragments(){
 clip_for_fragments(){ base(); }
 `;
 
-  const readmeTemplate = `# ${longSlug.replace(/-/g, ' ')}\n\n- Файл модели: \`${shortSlug}.scad\`\n- Версия: 1.0\n\n## Ключевые параметры (см. начало SCAD)\n- $fn, $fa, $fs, pin_fs — точность окружностей\n- test_fragment, frag_* — тест‑фрагменты\n- edge_chamfer_*, tiny — фаски/совм.\n\n## Превью\n\n![${shortSlug} iso-p](${shortSlug}.preview.iso-p.png)\n\n![${shortSlug} xy-o](${shortSlug}.preview.xy-o.png)\n\n![${shortSlug} xz-p](${shortSlug}.preview.xz-p.png)\n\n![${shortSlug} yz-p](${shortSlug}.preview.yz-p.png)\n`;
+  const readmeTemplate = `# ${longSlug.replace(/-/g, ' ')}\n\n- Файл модели: \`${shortSlug}.scad\`\n- Версия: 1.0\n\n## Ключевые параметры (см. начало SCAD)\n- $fn, $fa, $fs, pin_fs — точность окружностей\n- test_fragment, frag_* — тест‑фрагменты\n- edge_chamfer_*, tiny — фаски/совм.\n\n## Превью\n\n![${shortSlug} iso](preview.iso.png)\n\n![${shortSlug} xy](preview.xy.png)\n\n![${shortSlug} xz](preview.xz.png)\n\n![${shortSlug} yz](preview.yz.png)\n`;
 
   writeIfMissing(scadPath, scadTemplate);
   writeIfMissing(readmePath, readmeTemplate);

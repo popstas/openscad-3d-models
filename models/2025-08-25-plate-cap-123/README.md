@@ -17,10 +17,10 @@
 
 ## Превью
 
-![plate-cap iso-p](plate-cap-123.preview.iso-p.png)
+![iso](preview.iso.png)
 
-![plate-cap xy-o](plate-cap-123.preview.xy-o.png)
+![xy](preview.xy.png)
 
-![plate-cap xz-p](plate-cap-123.preview.xz-p.png)
+![xz](preview.xz.png)
 
-![plate-cap xy-p](plate-cap-123.preview.xy-p.png)
+![yz](preview.yz.png)

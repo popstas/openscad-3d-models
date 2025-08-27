@@ -33,10 +33,10 @@
 
 ## Превью
 
-![audio-case iso-p](audio-case.preview.iso-p.png)
+![iso](preview.iso.png)
 
-![audio-case xy-o](audio-case.preview.xy-o.png)
+![xy](preview.xy.png)
 
-![audio-case xz-p](audio-case.preview.xz-p.png)
+![xz](preview.xz.png)
 
-![audio-case yz-p](audio-case.preview.yz-p.png)
+![yz](preview.yz.png)
