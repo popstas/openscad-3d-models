@@ -46,14 +46,19 @@ function listScadFiles(dir: string): string[] {
 }
 
 async function render(scad: string, stl: string): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const args = ['-o', stl, scad];
-    const child = spawn(OPENSCAD_CMD, args, { stdio: 'inherit' });
-    child.on('exit', (code) => {
-      if (code === 0) resolve(); else reject(new Error(`openscad exit ${code}`));
-    });
-    child.on('error', reject);
+  // Fire-and-forget: start OpenSCAD and return immediately without waiting
+  const args = ['-o', stl, scad];
+  const child = spawn(OPENSCAD_CMD, args, { stdio: 'inherit' });
+  // Log errors but do not block the caller
+  child.on('error', (err) => {
+    console.warn(`openscad spawn error for ${path.relative(ROOT, scad)} -> ${path.relative(ROOT, stl)}:`, err.message);
   });
+  // Optionally detach so it doesn't keep the event loop tied to the child
+  if (typeof child.unref === 'function') {
+    try { child.unref(); } catch {}
+  }
+  // Resolve immediately
+  return;
 }
 
 type CamView = { name: string; camera: string; projection: 'o' | 'p' };
