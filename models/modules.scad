@@ -183,7 +183,7 @@ module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7, mink_r=0){
             minkowski(){
               linear_extrude(height=h2, scale=s, slices=30)
                 rounded_rect([sx2, sy2], r2);
-              sphere(r=m, $fs=fs_pin(pin_fs), $fa=6);
+              sphere(r=m, $fs=fs_pin(), $fa=6);
             }
     } else {
         linear_extrude(height=h, scale=s, slices=30) rounded_rect(size, r);
@@ -266,7 +266,7 @@ module chamfer_ring(d_outer, d_inner, h, chamfer){
 // Useful for long slots/fillets made by subtracting cylinders.
 module cyl_bar_y(xc, zc, r, h){
     translate([xc, 0, zc]) rotate([-90,0,0])
-        cylinder(h=h, r=r, $fs=fs_pin(pin_fs), $fa=6);
+        cylinder(h=h, r=r, $fs=fs_pin(), $fa=6);
 }
 
 // chamfer_wedge_y(ch, len_y) — triangular wedge extruded along Y for bottom chamfers

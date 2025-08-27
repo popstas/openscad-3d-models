@@ -10,6 +10,14 @@ const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'o
 const THROTTLE_MS = 1000;
 const IMG_SIZE = process.env.OPENSCAD_IMG_SIZE || '1200,900';
 
+// Overlay configuration
+const OVERLAY_ENABLED = (process.env.OPENSCAD_OVERLAY_DIMS || '1') !== '0';
+const OVERLAY_PADDING = 8; // px around overlay box
+const OVERLAY_SCALE = 2;   // base integer scale for bitmap font
+const OVERLAY_SCALE_MULT = Number(process.env.OPENSCAD_OVERLAY_SCALE_MULT || '1.2'); // 20% bigger by default
+const OVERLAY_BG = { r: 0, g: 0, b: 0, a: 180 };   // semi-opaque black
+const OVERLAY_FG = { r: 255, g: 255, b: 255, a: 255 }; // white text
+
 function toStl(scadPath: string): string {
   return scadPath.replace(/\.scad$/i, '.stl');
 }
@@ -124,11 +132,285 @@ function normalizePng(pngPath: string): void {
   }
 }
 
+// ======== STL dimensions (bounding box) ========
+type Vec3 = { x: number; y: number; z: number };
+
+function computeStlDimensions(stlPath: string): Vec3 | null {
+  let txt: string;
+  try {
+    // Read as UTF-8; OpenSCAD typically exports ASCII STL
+    txt = fs.readFileSync(stlPath, 'utf8');
+  } catch {
+    return null;
+  }
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  const re = /vertex\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s+([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/g;
+  let m: RegExpExecArray | null;
+  let found = false;
+  while ((m = re.exec(txt)) != null) {
+    const x = Number(m[1]);
+    const y = Number(m[2]);
+    const z = Number(m[3]);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+    found = true;
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  if (!found) return null;
+  return { x: maxX - minX, y: maxY - minY, z: maxZ - minZ };
+}
+
+function fmtMm(v: number): string { return v.toFixed(2) + 'mm'; }
+
+// ======== PNG overlay text (tiny 3x5 bitmap font) ========
+const FONT_W = 3;
+const FONT_H = 5;
+// Each glyph is an array of 5 strings of length 3, using '#' for on, '.' for off.
+const FONT: Record<string, string[]> = {
+  '0': [
+    '###',
+    '#.#',
+    '#.#',
+    '#.#',
+    '###',
+  ],
+  '1': [
+    '..#',
+    '..#',
+    '..#',
+    '..#',
+    '..#',
+  ],
+  '2': [
+    '###',
+    '..#',
+    '###',
+    '#..',
+    '###',
+  ],
+  '3': [
+    '###',
+    '..#',
+    '###',
+    '..#',
+    '###',
+  ],
+  '4': [
+    '#.#',
+    '#.#',
+    '###',
+    '..#',
+    '..#',
+  ],
+  '5': [
+    '###',
+    '#..',
+    '###',
+    '..#',
+    '###',
+  ],
+  '6': [
+    '###',
+    '#..',
+    '###',
+    '#.#',
+    '###',
+  ],
+  '7': [
+    '###',
+    '..#',
+    '..#',
+    '..#',
+    '..#',
+  ],
+  '8': [
+    '###',
+    '#.#',
+    '###',
+    '#.#',
+    '###',
+  ],
+  '9': [
+    '###',
+    '#.#',
+    '###',
+    '..#',
+    '###',
+  ],
+  'X': [
+    '#.#',
+    '#.#',
+    '.#.',
+    '#.#',
+    '#.#',
+  ],
+  'Y': [
+    '#.#',
+    '#.#',
+    '.#.',
+    '.#.',
+    '.#.',
+  ],
+  'Z': [
+    '###',
+    '..#',
+    '.#.',
+    '#..',
+    '###',
+  ],
+  'm': [
+    '...',
+    '##.',
+    '#.#',
+    '#.#',
+    '#.#',
+  ],
+  ':': [
+    '...',
+    '.#.',
+    '...',
+    '.#.',
+    '...',
+  ],
+  '.': [
+    '...',
+    '...',
+    '...',
+    '...',
+    '.#.',
+  ],
+  ' ': [
+    '...',
+    '...',
+    '...',
+    '...',
+    '...',
+  ],
+};
+
+function putPixel(img: PNG, x: number, y: number, rgba: { r: number; g: number; b: number; a: number }) {
+  if (x < 0 || y < 0 || x >= img.width || y >= img.height) return;
+  const idx = (img.width * y + x) << 2;
+  const a = rgba.a / 255;
+  const inv = 1 - a;
+  const r0 = img.data[idx + 0];
+  const g0 = img.data[idx + 1];
+  const b0 = img.data[idx + 2];
+  const a0 = img.data[idx + 3] / 255;
+  const outA = a + a0 * inv;
+  // simple alpha over
+  img.data[idx + 0] = Math.round(rgba.r * a + r0 * (1 - a));
+  img.data[idx + 1] = Math.round(rgba.g * a + g0 * (1 - a));
+  img.data[idx + 2] = Math.round(rgba.b * a + b0 * (1 - a));
+  img.data[idx + 3] = Math.round(outA * 255);
+}
+
+function fillRect(img: PNG, x: number, y: number, w: number, h: number, color: { r: number; g: number; b: number; a: number }) {
+  for (let yy = 0; yy < h; yy++) {
+    for (let xx = 0; xx < w; xx++) {
+      putPixel(img, x + xx, y + yy, color);
+    }
+  }
+}
+
+function drawChar(img: PNG, ch: string, x: number, y: number, scale: number, color: { r: number; g: number; b: number; a: number }) {
+  const glyph = FONT[ch] || FONT[' '];
+  for (let gy = 0; gy < FONT_H; gy++) {
+    const row = glyph[gy];
+    for (let gx = 0; gx < FONT_W; gx++) {
+      if (row[gx] === '#') {
+        fillRect(img, x + gx * scale, y + gy * scale, scale, scale, color);
+      }
+    }
+  }
+}
+
+function textSize(text: string, scale: number): { w: number; h: number } {
+  const w = text.length * (FONT_W * scale) + Math.max(0, text.length - 1) * scale; // 1px space between chars scaled
+  const h = FONT_H * scale;
+  return { w, h };
+}
+
+function drawText(img: PNG, text: string, x: number, y: number, scale: number, color: { r: number; g: number; b: number; a: number }) {
+  let cx = x;
+  for (const ch of text) {
+    drawChar(img, ch, cx, y, scale, color);
+    cx += FONT_W * scale + scale; // char width + spacer
+  }
+}
+
+function getOverlayScaleInt(): number {
+  const proposed = OVERLAY_SCALE * (isFinite(OVERLAY_SCALE_MULT) ? OVERLAY_SCALE_MULT : 1);
+  let s = Math.round(proposed);
+  if (s < 1) s = 1;
+  // Ensure growth if multiplier > 1 but rounding kept it same
+  if (OVERLAY_SCALE_MULT > 1 && s <= OVERLAY_SCALE) s = OVERLAY_SCALE + 1;
+  return s;
+}
+
+function overlayLabelOnPng(pngPath: string, lines: string[]): void {
+  let buf: Buffer;
+  try { buf = fs.readFileSync(pngPath); } catch { return; }
+  let img: PNG;
+  try { img = PNG.sync.read(buf); } catch { return; }
+
+  // Calculate box size
+  const scale = getOverlayScaleInt();
+  const lineSizes = lines.map(l => textSize(l, scale));
+  const textW = lineSizes.reduce((m, s) => Math.max(m, s.w), 0);
+  const textH = lineSizes.reduce((sum, s) => sum + s.h, 0) + (Math.max(0, lines.length - 1) * scale * 2);
+  const boxW = textW + OVERLAY_PADDING * 2;
+  const boxH = textH + OVERLAY_PADDING * 2;
+
+  // Bottom-left corner
+  const x0 = OVERLAY_PADDING;
+  const y0 = img.height - boxH - OVERLAY_PADDING;
+
+  // Draw background box with slight transparency
+  fillRect(img, x0, y0, boxW, boxH, OVERLAY_BG);
+
+  // Draw lines
+  let cy = y0 + OVERLAY_PADDING;
+  for (let i = 0; i < lines.length; i++) {
+    drawText(img, lines[i], x0 + OVERLAY_PADDING, cy, scale, OVERLAY_FG);
+    cy += lineSizes[i].h + scale * 2; // line spacing
+  }
+
+  // Write back with deterministic encoding
+  try {
+    const outBuf = PNG.sync.write(img, {
+      filterType: 0,
+      colorType: (img as any).colorType ?? 6,
+      bitDepth: (img as any).depth ?? 8,
+      deflateLevel: 9,
+      deflateStrategy: zlib.constants.Z_FIXED,
+    });
+    fs.writeFileSync(pngPath, outBuf);
+  } catch {}
+}
+
 // Helper: render PNG and normalize it for deterministic output
 async function renderPngWithNormalize(scad: string, png: string, cam: CamView): Promise<void> {
   await renderPng(scad, png, cam);
   // Post-process: re-encode for deterministic output
   normalizePng(png);
+  // Overlay dimensions if possible
+  if (OVERLAY_ENABLED) {
+    try {
+      const stlPath = toStl(scad);
+      const dims = computeStlDimensions(stlPath);
+      if (dims) {
+        const lines = [
+          `X: ${fmtMm(dims.x)}  Y: ${fmtMm(dims.y)}  Z: ${fmtMm(dims.z)}`,
+        ];
+        overlayLabelOnPng(png, lines);
+      }
+    } catch (e) {
+      console.warn('overlay dims failed:', (e as Error).message);
+    }
+  }
 }
 
 let building = new Set<string>();
