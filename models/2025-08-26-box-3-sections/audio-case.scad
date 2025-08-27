@@ -85,8 +85,9 @@ sec_corner_r = 2;          // радиус скругления углов вы�
 // Параметры крышки (cap)
 cap_top_th        = 2;     // толщина верхней пластины крышки
 cap_lip_h         = 8;     // высота юбки (захват за стенки)
-cap_fit_clearance = 0.2;   // зазор между наружными стенками коробки и внутренней поверхностью юбки
+cap_fit_clearance = 0.1;   // зазор между наружными стенками коробки и внутренней поверхностью юбки
 cap_outer_margin  = 0.8;   // выступ крышки наружу относительно корпуса (по всем сторонам)
+cap_th            = 1.6; // толщина стенки крышки; по умолчанию согласована с margin и зазором
 cap_minkowski_r  = 2;   // радиус скругления краёв крышки через minkowski
 base_minkowski_r = 2;   // радиус скругления краёв основания через minkowski
 
@@ -182,6 +183,8 @@ module dividers_top_cut(){
 // - внутренней юбки высотой cap_lip_h, которая надевается на корпус с зазором cap_fit_clearance
 // Реализовано двумя модулями: cap() и cap_upside_down(); без вспомогательных подмодулей
 module cap(){
+    // Эффективный внешний отступ для формирования внешнего габарита крышки через толщину и зазор
+    outer_margin_eff = cap_fit_clearance + cap_th;
     // Внешний сплошной объём крышки: цельное тело высотой cap_top_th+cap_lip_h
     // При включённом Minkowski предварительно уменьшаем высоту на 2*cap_minkowski_r,
     // чтобы итоговая высота сохранилась после скругления сферы, поднятой на r.
@@ -189,12 +192,15 @@ module cap(){
         // Наружный контур с опциональным скруглением краёв
         if (cap_minkowski_r > 0){
             minkowski(){
-                // предварительно сжимаем по Z, чтобы высота после minkowski стала cap_h
+                // предварительно сжимаем по XY и Z, чтобы габариты после minkowski совпали с расчётными
                 cap_h_target = cap_top_th + cap_lip_h;
                 h_outer = cap_h_target - 2*cap_minkowski_r;
                 rr_extrude(
-                    size=[outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin],
-                    r=radius_r + cap_outer_margin,
+                    size=[
+                        max(outer_x + 2*outer_margin_eff - 2*cap_minkowski_r, eps()),
+                        max(outer_y + 2*outer_margin_eff - 2*cap_minkowski_r, eps())
+                    ],
+                    r=max(radius_r + outer_margin_eff - cap_minkowski_r, 0),
                     h=max(h_outer, eps())
                 );
                 // Сдвиг сферы вверх на r сохраняет нижнюю плоскость без скругления
@@ -202,19 +208,36 @@ module cap(){
             }
         } else {
             rr_extrude(
-                size=[outer_x + 2*cap_outer_margin, outer_y + 2*cap_outer_margin],
-                r=radius_r + cap_outer_margin,
+                size=[outer_x + 2*outer_margin_eff, outer_y + 2*outer_margin_eff],
+                r=radius_r + outer_margin_eff,
                 h=cap_top_th + cap_lip_h
             );
         }
 
-        // Внутренняя поверхность юбки (посадка по зазору); немного уводим вниз на eps
-        translate([0,0,-eps()])
-            rr_extrude(
-                size=[outer_x + 2*cap_fit_clearance, outer_y + 2*cap_fit_clearance],
-                r=radius_r + cap_fit_clearance,
-                h=cap_lip_h + 2*eps()
-            );
+        // Внутренняя поверхность юбки (посадка по зазору)
+        if (cap_minkowski_r > 0){
+            // Подгоняем профиль вычитания под внешний minkowski, чтобы толщина была ровно cap_th
+            translate([0,0,-eps()])
+            minkowski(){
+                h_inner = cap_lip_h + 2*eps() - 2*cap_minkowski_r;
+                rr_extrude(
+                    size=[
+                        max(outer_x + 2*cap_fit_clearance - 2*cap_minkowski_r, eps()),
+                        max(outer_y + 2*cap_fit_clearance - 2*cap_minkowski_r, eps())
+                    ],
+                    r=max(radius_r + cap_fit_clearance - cap_minkowski_r, 0),
+                    h=max(h_inner, eps())
+                );
+                translate([0,0,cap_minkowski_r]) sphere(r=cap_minkowski_r);
+            }
+        } else {
+            translate([0,0,-eps()])
+                rr_extrude(
+                    size=[outer_x + 2*cap_fit_clearance, outer_y + 2*cap_fit_clearance],
+                    r=radius_r + cap_fit_clearance,
+                    h=cap_lip_h + 2*eps()
+                );
+        }
     }
 }
 
