@@ -248,6 +248,45 @@ module cap_upside_down(){
             cap();
 }
 
+// ---------------------------------
+// Cap utility: make inner hole from top down to Z=10 mm
+// ---------------------------------
+// Usage:
+// cap_make_hole() cap_upside_down();
+// Wraps children() with difference() and subtracts a centered rounded-rectangle
+// matching the cap's inner size. The cut starts from the cap's max Z and goes
+// down to z_keep (default 10 mm), leaving the lower part intact.
+module cap_make_hole(z_keep=10){
+    outer_margin_eff = cap_fit_clearance + cap_th;
+
+    // Inner profile to match cap's inner skirt
+    inner_sx = (cap_minkowski_r > 0)
+        ? max(outer_x + 1*cap_fit_clearance - 2*cap_minkowski_r, eps())
+        : (outer_x + 2*cap_fit_clearance);
+    inner_sy = (cap_minkowski_r > 0)
+        ? max(outer_y + 2*cap_fit_clearance - 2*cap_minkowski_r, eps())
+        : (outer_y + 2*cap_fit_clearance);
+    inner_r = (cap_minkowski_r > 0)
+        ? max(radius_r + cap_fit_clearance - cap_minkowski_r, 0)
+        : (radius_r + cap_fit_clearance);
+
+    // Center of cap in XY
+    cx = (outer_x + 2*outer_margin_eff)/2;
+    cy = (outer_y + 2*outer_margin_eff)/2;
+    // For minkowski variant in cap(), XY min shifts by -cap_minkowski_r
+    xy_ofs = (cap_minkowski_r > 0) ? -cap_minkowski_r : 0;
+
+    difference(){
+        children();
+        // Subtract only if we have material above z_keep
+        if (cap_h > z_keep){
+            translate([xy_ofs + cx, xy_ofs + cy, z_keep - eps()])
+                linear_extrude(height=max(cap_h - z_keep + 2*eps(), eps()))
+                    rounded_rect_centered(inner_sx, inner_sy, inner_r);
+        }
+    }
+}
+
 // ---------------
 // Клиппер фрагментов
 // ---------------
