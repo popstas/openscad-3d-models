@@ -39,12 +39,11 @@ screen_frame_gap = 0.2;      // только для высоты вычитан�
 // ----------------------------
 // Параметры модели (все размеры в мм)
 // ----------------------------
-// Коробка делится на 3 отдела: RED (провода), YELLOW (диктофон), GREEN (РФ передатчики)
+// Коробка делится на N отделов: section 1, section 2, ... section N
 // Входные требования:
 // - внутренняя высота коробки = 31
-// - высота зелёного отдела max 31, жёлтого 26 (красный TBD — по умолчанию 31)
 // - толщины стенок (наружных и межсекционных) = 2
-// - ширины отделов: RED=30, YELLOW=67.5, GREEN=37
+// - ширины отделов задаются массивом sections_w, любое количество
 // - ширина по Y (глубина) не указана (inner_y)
 
 // Флаги печати
@@ -58,11 +57,8 @@ bottom_th    = 2;          // толщина дна
 
 // Все отсеки открыты до верха (inner_h); индивидуальные высоты не используются
 
-// Ширины отсеков (по X)
-red_w        = 10;//30;
-yellow_w     = 20;//67.5;
-green_w      = 30;//37;
-sections_w = [red_w, yellow_w, green_w];
+// Ширины отсеков (по X). Любое количество.
+sections_w = [10, 20, 30];
 
 // Поправки размеров (фактические измерения)
 sec_w_delta  = 1;      // каждая секция по X на 1 мм уже
@@ -73,10 +69,12 @@ inner_y      = 20;//158.6;        // номинальная длина по Y
 inner_h      = 15;//31;           // внутренняя высота во всех отсеках (максимум)
 
 // Эффективные размеры с учётом поправок
-red_w_e    = red_w    + sec_w_delta;
-yellow_w_e = yellow_w + sec_w_delta;
-green_w_e  = green_w  + sec_w_delta;
+sections_w_e = [ for (w = sections_w) w + sec_w_delta ];
 inner_y_e  = inner_y  + inner_y_delta;
+
+// Вспомогательные функции суммирования
+function sum_first(v, n, i=0, acc=0) = (i >= n) ? acc : sum_first(v, n, i+1, acc + v[i]);
+function vec_sum(v) = sum_first(v, len(v));
 
 // Скругление наружного прямоугольника
 radius_r     = 3;          // радиус скругления углов
@@ -111,7 +109,9 @@ module base_outline2d(){
 // ----------------------------
 // Геометрия корпуса
 // ----------------------------
-outer_x = 2*wall_th + red_w_e + divider_th + yellow_w_e + divider_th + green_w_e;
+// Общая ширина X: стены + сумма секций + перегородки между ними
+n_sections = len(sections_w_e);
+outer_x = 2*wall_th + vec_sum(sections_w_e) + divider_th * max(n_sections - 1, 0);
 outer_y = 2*wall_th + inner_y_shift;
 outer_h = bottom_th + inner_h;
 
@@ -130,20 +130,12 @@ module base_fill(){
 
 section_x_offset = wall_th+wall_th/2;
 section_y = wall_th+wall_th/2;
-// Три выреза-отсека. Их суммарная ширина и позиции оставляют наружные стены и две перегородки толщиной divider_th.
-module section_red(){
-    translate([section_x_offset, section_y, bottom_th])
-        rr_extrude(size=[red_w_e, inner_y_shift], r=sec_corner_r, h=inner_h);
-}
-
-module section_yellow(){
-    translate([section_x_offset + red_w_e + divider_th, section_y, bottom_th])
-        rr_extrude(size=[yellow_w_e, inner_y_shift], r=sec_corner_r, h=inner_h);
-}
-
-module section_green(){
-    translate([section_x_offset + red_w_e + divider_th + yellow_w_e + divider_th, section_y, bottom_th])
-        rr_extrude(size=[green_w_e, inner_y_shift], r=sec_corner_r, h=inner_h);
+// Вырезы-отсеки формируются по массиву sections_w_e
+// Позиция i-го отсека: сдвиг от левой стены = сумма предыдущих ширин + перегородки между ними
+function section_x_at(i) = section_x_offset + sum_first(sections_w_e, i) + divider_th * i;
+module section_at(i){
+    translate([section_x_at(i), section_y, bottom_th])
+        rr_extrude(size=[sections_w_e[i], inner_y_shift], r=sec_corner_r, h=inner_h);
 }
 
 module base(){
@@ -164,10 +156,9 @@ module base(){
             base_fill();
         }
 
-        // Вырезы секций
-        section_red();
-        section_yellow();
-        section_green();
+        // Вырезы секций по массиву ширин (section 1..N)
+        for (i = [0 : n_sections - 1])
+            section_at(i);
     }
 }
 
