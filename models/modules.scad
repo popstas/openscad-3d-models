@@ -105,17 +105,9 @@ module shell(d, center=false){
 // rounded_rect(size=[x,y], r) — rounded rectangle by outer size; anchor at (0,0)
 module rounded_rect(size=[10,10], r=2){
     sx = size[0]; sy = size[1];
+    translate([r, r])
     offset(r=r)
         square([max(sx-2*r, eps()), max(sy-2*r, eps())], center=false);
-}
-
-// rounded_rect_centered(w, h, r) — centered at origin
-module rounded_rect_centered(w, h, r){
-    r2 = min(r, min(w, h)/2);
-    minkowski(){
-        square([max(w - 2*r2, eps()), max(h - 2*r2, eps())], center=true);
-        circle(r=r2);
-    }
 }
 
 // rounded_rect_aniso(w, h, rx, ry) — centered, anisotropic radii
@@ -125,28 +117,6 @@ module rounded_rect_aniso(w, h, rx, ry){
     minkowski(){
         square([max(w - 2*rx2, eps()), max(h - 2*ry2, eps())], center=true);
         scale([rx2, ry2]) circle(r=1);
-    }
-}
-
-// -------------------------------------------------
-// 3D: Chamfered plates and extrusions
-// -------------------------------------------------
-// plate_with_bottom_chamfer(l,w,t,chz,chx,chy)
-// Plate l×w×t with a bottom-only chamfer of height chz and horizontal reach chx/chy per side.
-module plate_with_bottom_chamfer(l, w, t, chz, chx, chy){
-    chz2 = clamp_chz(t, chz);
-    chxy = clamp_chxy(l, w, chx, chy);
-    chx2 = chxy[0];
-    chy2 = chxy[1];
-    if (chz2 <= 0 || (chx2 <= 0 && chy2 <= 0)){
-        cube([l,w,t]);
-    } else {
-        union(){
-            translate([0,0,chz2]) cube([l,w,t-chz2]);
-            translate([l/2, w/2, 0])
-                linear_extrude(height=chz2, scale=[l/max(l-2*chx2, eps()), w/max(w-2*chy2, eps())])
-                    square([max(l-2*chx2, eps()), max(w-2*chy2, eps())], center=true);
-        }
     }
 }
 
@@ -177,6 +147,20 @@ module rounded_rect_extrude_bottom_chamfer(size=[10,10], r=2, h=5, chz=0.8, chx=
 // rr_extrude(size=[x,y], r, h) — sugar for linear_extrude(rounded_rect)
 module rr_extrude(size=[10,10], r=2, h=5){
     linear_extrude(height=h) rounded_rect(size, r);
+}
+
+// Скруглённый призматический объём через Minkowski, с сохранением минимума в (0,0,0)
+// Входные size/r/h — целевые габариты результата; если kr==0, просто rr().
+module rounded_prism(size=[10,10], h=1, r=0, kr=0){
+    s = size; rr0 = r; hh = h; k = kr;
+    if (k > 0){
+        minkowski(){
+            rr_extrude(size=[max(s[0]-2*k, eps()), max(s[1]-2*k, eps())], r=max(rr0 - k, 0), h=max(hh - 2*k, eps()));
+            translate([k, k, k]) sphere(r=k);
+        }
+    } else {
+        rr_extrude(size=s, r=rr0, h=hh);
+    }
 }
 
 module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7, mink_r=0){
