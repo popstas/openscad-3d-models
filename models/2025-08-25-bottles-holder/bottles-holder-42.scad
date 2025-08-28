@@ -13,9 +13,9 @@ use <../modules.scad>
 // ----------------------------
 // Параметры модели
 // ----------------------------
-bottle_diam   = 30;      // диаметр бутылки, мм
-bottle_len    = 130;     // длина бутылки по X, мм
-num_bottles   = 4;       // количество бутылок в ряду (по Y)
+bottle_diam   = 42;      // диаметр бутылки, мм
+bottle_len    = 75;     // длина бутылки по X, мм
+num_bottles   = 2;       // количество бутылок в ряду (по Y)
 pad_between   = 1.5;     // прокладка/зазор между бутылками (1–2 мм)
 
 // Габариты/толщины
@@ -66,26 +66,18 @@ function bottle_center_y(i) = bottle_diam/2 + i*(bottle_diam + pad_between);
 // ----------------------------
 // Режущий цилиндр для выемки (полуканавка) вдоль X, ограниченный по высоте
 module saddle_cutter(center_y){
+    z_offset = 0;//bottle_diam / 10 * -1;
     intersection(){
         // цилиндр вдоль X, начинается после левого упора и заканчивается перед правым
-        translate([end_stop_th, center_y, 0])
+        translate([end_stop_th, center_y, end_stop_th])
             rotate([0,90,0])
                 cylinder(h=bottle_len, d=bottle_diam, $fs=pin_fs, $fa=6);
         // ограничиваем область выемки только внутренней зоной между рельсами и по Z до z_cap
-        translate([end_stop_th, 0, 00])
+        translate([end_stop_th, 0, z_offset])
             cube([bottle_len, inner_w, z_cap], center=false);
     }
 }
 
-// Левый/правый рельс
-module rail_left(){}
-module rail_right(){}
-
-// Облегчённые перемычки по X между рельсами (мосты)
-module bridges_light(){
-    for(x = [end_stop_th : bridge_pitch : (tot_l - end_stop_th)])
-        translate([x, 0, 0]) cube([bridge_th, inner_w, base_th], center=false);
-}
 
 // Торцевые упоры по X только между рельсами
 module end_stop(){
@@ -102,6 +94,12 @@ module cradle_cuts(){
     saddle_cutter(inner_w + bottle_diam/2);
 }
 
+// Срезающий параллелепипед для верхней плоскости
+module cut_top(){
+    translate(v = [-10, -10, -z_cap])
+        cube([tot_l+20, inner_w+20, 24], center=false);
+}
+
 // Сплошная внутреняя плита между рельсами на высоту выемки (будет облегчена вычитанием цилиндров)
 module deck_core(){
     translate([end_stop_th, 0, 0])
@@ -112,16 +110,11 @@ module deck_core(){
 module base_raw(){
     difference(){
         union(){
-            // боковые рельсы убраны
-            // Тонкие мосты снизу для жёсткости
-            // bridges_light();
-            // Основной объём под выемки
             deck_core();
             end_stop();
         }
         cradle_cuts();
-        translate(v = [-10, -10, -z_cap])
-          cube([tot_l+20, inner_w+20, 24], center=false);
+        // cut_top();
     }
 }
 
