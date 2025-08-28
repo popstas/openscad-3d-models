@@ -23,6 +23,16 @@ description = "Reusable base functions and modules for OpenSCAD models";
 //   rr2d_round_minY/minX, L2D -> removed (recreate locally if needed)
 
 // -------------------------------------------------
+// Fragment defaults (effective only when this file is included, not used)
+// -------------------------------------------------
+// These provide sane defaults for fragment helpers. Models may override.
+test_fragment = false;   // true — печатать только угловые фрагменты (base+frame)
+frag_size     = 20;      // размер квадрата вырезки, мм
+frag_index    = 0;       // 0=НЛ, 1=ВЛ, 2=НП, 3=ВП (относительно основания)
+frag_gap_x    = 10;      // зазор между фрагментами по X, мм
+frag_h_extra  = 20;      // запас по высоте клипа, мм
+
+// -------------------------------------------------
 // Common 2D operations: offset, inset, fillet, rounding, shell
 // -------------------------------------------------
 // NOTE: These operate on 2D children(). Use inside a 2D context or before linear_extrude.
@@ -291,6 +301,23 @@ module clip_for_fragments_bbox(L, W, H, enabled=false, frag_size=20, frag_index=
     } else {
         children();
     }
+}
+
+// clip_for_fragments() — simple corner clipper at origin using model variables
+// Moves the commonly used template helper into the shared library.
+// Respects model's test_fragment flag and uses safe fallbacks for sizes.
+module clip_for_fragments(){
+    enabled = is_undef(test_fragment) ? false : test_fragment;
+    if (enabled){
+        s = is_undef(frag_size) ? 20 : frag_size;
+        h_extra = is_undef(frag_h_extra) ? 20 : frag_h_extra;
+        // Prefer base_h, fallback to base_z if present, else 20mm
+        H = is_undef(base_h) ? (is_undef(base_z) ? 20 : base_z) : base_h;
+        intersection(){
+            children(0);
+            translate([0, 0, -h_extra]) cube([s, s, H + 2*h_extra], center=false);
+        }
+    } else { children(); }
 }
 
 // -------------------------------------------------

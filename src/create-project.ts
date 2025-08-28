@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 
 function usage(): never {
-  console.error('Usage: npm run create-project <long_name> <short_name>');
-  console.error('Example: npm run create-project ecig-platform ecig-platform');
+  console.error('Usage: npm run create-project <long_name> [short_name] [template]');
+  console.error('Example: npm run create-project ecig-platform ecig-platform default');
   process.exit(1);
 }
 
@@ -43,11 +43,12 @@ function emptyPngPlaceholder(): Buffer {
 }
 
 function main() {
-  const [, , longRaw, shortRaw] = process.argv;
-  if (!longRaw || !shortRaw) usage();
+  const [, , longRaw, shortRaw, templateRaw] = process.argv;
+  if (!longRaw) usage();
 
   const longSlug = sanitizeSlug(longRaw);
-  const shortSlug = sanitizeSlug(shortRaw);
+  const shortSlug = sanitizeSlug(shortRaw || longSlug);
+  const templateName = sanitizeSlug(templateRaw || 'default');
   if (!longSlug || !shortSlug) usage();
 
   const date = todayStamp();
@@ -70,82 +71,18 @@ function main() {
   const scadPath = path.join(modelDir, scadName);
   const readmePath = path.join(modelDir, readmeName);
 
-  const scadTemplate = `// =============================================
-// 3D: ${longSlug.replace(/-/g, ' ')}
-// Version: 1.0
-// Author: generator
-// =============================================
-
-description = "";
-version_str = "1.0;
-
-use <../modules.scad>;
-
-// ----------------------------
-// Настройка точности
-// ----------------------------
-$fn = 0;        // фиксированную сегментацию отключаем
-$fa = 6;        // 5–8° обычно достаточно
-$fs = 0.35;     // ≈ диаметр сопла (0.3–0.5 для сопла 0.4)
-pin_fs = 0.25;  // чуть тоньше для штырей и отверстий
-
-// ----------------------------
-// Тестовые фрагменты (стандартный блок)
-// ----------------------------
-test_fragment = false;   // true — печатать только угловые фрагменты (base+frame)
-frag_size     = 20;      // размер квадрата вырезки, мм
-frag_index    = 0;       // 0=НЛ, 1=ВЛ, 2=НП, 3=ВП (относительно основания)
-frag_gap_x    = 10;      // зазор между фрагментами по X, мм
-frag_h_extra  = 20;      // запас по высоте клипа, мм
-
-// ----------------------------
-// Фаски/скругления по краям (совместимость)
-// ----------------------------
-tiny = 0.1;                  // небольшой зазор для булевых операций
-edge_chamfer_z = 1;          // высота фаски по Z (мм)
-edge_chamfer_x = 5;          // горизонтальный вылет фаски по X (каждая сторона), мм
-edge_chamfer_y = 5;          // горизонтальный вылет фаски по Y (каждая сторона), мм
-screen_frame_gap = 0.2;      // совместимость
-
-// ----------------------------
-// Параметры модели (примерные, замените под задачу)
-// ----------------------------
-base_x = 100;  // ширина X, мм, width
-base_y = 50;   // высота Y, мм, height
-base_h = 5;    // толщина Z, мм, th
-radius_r = 3;  // скругление
-
-// ----------------------------
-// Фрагменты: назовите элементы короткими именами с _
-// ----------------------------
-// - base: основная деталь
-// - top_pad, base_pad, wrap_left, main_wall: примеры имён
-
-module base(){
-    linear_extrude(height=base_h) rounded_rect([base_x, base_y], r=radius_r);
-}
-
-// ---------------
-// Клиппер фрагментов
-// ---------------
-module clip_for_fragments(){
-    if(test_fragment){
-        intersection(){
-            children(0);
-            translate([0, 0, -frag_h_extra]) cube([frag_size, frag_size, base_h + 2*frag_h_extra]);
-        }
-    } else { children(); }
-}
-
-// ----------------------------
-// ВЫВОД МОДЕЛИ
-// ----------------------------
-clip_for_fragments(){ base(); }
-`;
+  // Read SCAD template from models/templates/<template>.scad and substitute placeholders
+  const templatePath = path.join(root, 'models', 'templates', `${templateName}.scad`);
+  let scadContent = fs.readFileSync(templatePath, 'utf8');
+  const longName = longSlug.replace(/-/g, ' ');
+  const shortDescription = '';
+  scadContent = scadContent
+    .replace(/\$\{longName\}/g, longName)
+    .replace(/\$\{shortDescription\}/g, shortDescription);
 
   const readmeTemplate = `# ${longSlug.replace(/-/g, ' ')}\n\n- Файл модели: \`${shortSlug}.scad\`\n- Версия: 1.0\n\n## Ключевые параметры (см. начало SCAD)\n- $fn, $fa, $fs, pin_fs — точность окружностей\n- test_fragment, frag_* — тест‑фрагменты\n- edge_chamfer_*, tiny — фаски/совм.\n\n## Превью\n\n![${shortSlug} iso](preview.iso.png)\n\n![${shortSlug} xy](preview.xy.png)\n\n![${shortSlug} xz](preview.xz.png)\n\n![${shortSlug} yz](preview.yz.png)\n`;
 
-  writeIfMissing(scadPath, scadTemplate);
+  writeIfMissing(scadPath, scadContent);
   writeIfMissing(readmePath, readmeTemplate);
 
   const png = emptyPngPlaceholder();
