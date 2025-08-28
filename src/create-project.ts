@@ -72,7 +72,7 @@ function main() {
   const readmePath = path.join(modelDir, readmeName);
 
   // Read SCAD template from models/templates/<template>.scad and substitute placeholders
-  const templatePath = path.join(root, 'models', 'templates', templateName, `${templateName}.scad`);
+  const templatePath = path.join(root, 'models', `template-${templateName}`, `${templateName}.scad`);
   let scadContent = fs.readFileSync(templatePath, 'utf8');
   const longName = longSlug.replace(/-/g, ' ');
   const shortDescription = '';

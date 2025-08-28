@@ -14,6 +14,7 @@ version_str = "1.0";
 // ----------------------------
 
 // Параметры модели (position: front at XZ axis, top view at XY, side view at YZ)
+// base x, y, z указаны для внешних габаритов. Внутренние размеры меньше на ширину стенок
 // ----------------------------
 base_x = 50; // ширина X, мм, width
 base_y = 100; // глубина Y, мм, глубина при pow: XZ
@@ -24,7 +25,7 @@ base_mink_r = 3; // сферическое сглаживание краёв
 
 // Включение деталей для вывода
 print_base = true; // print base
-print_cap = true; // print cap
+print_cap = false; // print cap
 // TODO: print vars for each detail
 
 // ----------------------------
@@ -56,8 +57,8 @@ frag_h_extra  = 20;      // запас по высоте клипа, мм
 // ----------------------------
 // TODO:
 walls_th = 2 * base_th;
-cap_x = base_x + walls_th;
-cap_y = base_y + walls_th;
+cap_x = base_x;
+cap_y = base_y;
 
 // ----------------------------
 // Модули фрагментов модели
@@ -91,7 +92,7 @@ module pocket_cut(){
 }
 
 module cap(){
-    translate([cap_x, 0, 0])
+    translate([cap_x + walls_th, 0, 0])
         rounded_rr_extrude(
             size=[cap_x, cap_y],
             r=radius_r,
