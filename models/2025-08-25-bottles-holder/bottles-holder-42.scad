@@ -1,11 +1,11 @@
 // =============================================
-// 3D: Horizontal Holder for 4 Bottles (130x30)
+// 3D: Horizontal Holder for 2 Bottles (75x42)
 // Version: 1.0
 // Author: ChatGPT (OpenSCAD)
 // =============================================
 
 // ----------------------------
-description = "Horizontal Holder for 4 Bottles (130x30)";
+description = "Horizontal holder for 2 bottles, d=42, len=75";
 
 // Shared library
 use <../modules.scad>
@@ -14,7 +14,7 @@ use <../modules.scad>
 // Параметры модели
 // ----------------------------
 bottle_diam   = 42;      // диаметр бутылки, мм
-bottle_len    = 75;     // длина бутылки по X, мм
+bottle_y      = 75;     // длина бутылки по Y, мм
 num_bottles   = 2;       // количество бутылок в ряду (по Y)
 pad_between   = 1.5;     // прокладка/зазор между бутылками (1–2 мм)
 
@@ -27,6 +27,10 @@ bridge_pitch  = 35;      // шаг перемычек по X, мм
 end_stop_h    = 10;       // высота торцевых упоров, мм
 end_stop_th   = 1;       // толщина торцевых упоров по X, мм
 max_h         = 50;      // ограничение по высоте всей детали, мм
+
+// Скругление краёв через minkowski
+use_minkowski = false;    // включить скругление краёв
+minkowski_r   = 1;       // радиус сферы для скругления, мм
 
 // ----------------------------
 // Настройка точности
@@ -48,7 +52,7 @@ frag_h_extra  = 12;     // запас по высоте клипа, мм
 // Вычисляемые размеры
 inner_w = num_bottles*bottle_diam + (num_bottles-1)*pad_between;      // рабочая ширина между рельсами
 tot_w   = inner_w;// + 2*rail_w;                                          // общая ширина
-tot_l   = bottle_len + end_stop_th;                                  // общая длина (с упорами)
+tot_y   = bottle_y + end_stop_th;                                    // общая длина по Y (с упорами)
 
 // Низкий подпрофиль «ложемента» — высота положительного сегмента
 saddle_h = min(max_h - rail_h, bottle_diam/3);                         // не выше трети диаметра
@@ -58,37 +62,37 @@ z_cap  = rail_h + end_stop_h;
 // Полная высота модели для переворота по Z
 total_h = z_cap;
 
-// Центры бутылок по Y
-function bottle_center_y(i) = bottle_diam/2 + i*(bottle_diam + pad_between);
+// Центры бутылок по X (ранее по Y)
+function bottle_center_x(i) = bottle_diam/2 + i*(bottle_diam + pad_between);
 
 // ----------------------------
 // Вспомогательные модули
 // ----------------------------
-// Режущий цилиндр для выемки (полуканавка) вдоль X, ограниченный по высоте
-module saddle_cutter(center_y){
+// Режущий цилиндр для выемки (полуканавка) вдоль Y, ограниченный по высоте
+module saddle_cutter(center_x){
     z_offset = 0;//bottle_diam / 10 * -1;
     intersection(){
-        // цилиндр вдоль X, начинается после левого упора и заканчивается перед правым
-        translate([end_stop_th, center_y, end_stop_th])
-            rotate([0,90,0])
-                cylinder(h=bottle_len, d=bottle_diam, $fs=pin_fs, $fa=6);
+        // цилиндр вдоль Y, начинается после нижнего упора и заканчивается перед верхним
+        translate([center_x, end_stop_th, bottle_diam/2 + base_th])
+            rotate([-90,0,0])
+                cylinder(h=bottle_y, d=bottle_diam, $fs=pin_fs, $fa=6);
         // ограничиваем область выемки только внутренней зоной между рельсами и по Z до z_cap
-        translate([end_stop_th, 0, z_offset])
-            cube([bottle_len, inner_w, z_cap], center=false);
+        translate([0, end_stop_th, z_offset])
+            cube([inner_w, bottle_y, z_cap], center=false);
     }
 }
 
 
-// Торцевые упоры по X только между рельсами
+// Торцевые упоры по Y только между рельсами
 module end_stop(){
-    // у правого края
-    translate([tot_l - end_stop_th, rail_w, rail_h]) cube([end_stop_th*2, inner_w, end_stop_h], center=false);
+    // у верхнего края
+    translate([rail_w, tot_y - end_stop_th, rail_h]) cube([inner_w, end_stop_th, end_stop_h], center=false);
 }
 
 // Объединение всех выемок
 module cradle_cuts(){
     for(i = [0 : num_bottles-1])
-        saddle_cutter(bottle_center_y(i));
+        saddle_cutter(bottle_center_x(i));
     // Убираем внешние стенки по краям: дополнительные полуканавки за пределами рабочей области
     saddle_cutter(-bottle_diam/2);
     saddle_cutter(inner_w + bottle_diam/2);
@@ -97,13 +101,13 @@ module cradle_cuts(){
 // Срезающий параллелепипед для верхней плоскости
 module cut_top(){
     translate(v = [-10, -10, -z_cap])
-        cube([tot_l+20, inner_w+20, 24], center=false);
+        cube([inner_w+20, tot_y+20, 24], center=false);
 }
 
 // Сплошная внутреняя плита между рельсами на высоту выемки (будет облегчена вычитанием цилиндров)
 module deck_core(){
-    translate([end_stop_th, 0, 0])
-        cube([bottle_len, inner_w, z_cap], center=false);
+    translate([0, end_stop_th, 0])
+        cube([inner_w, bottle_y, z_cap], center=false);
 }
 
 // Полная сборка (сырая, без финального среза по Z)
@@ -120,7 +124,14 @@ module base_raw(){
 
 // Срезаем верх по z_cap на всякий случай
 module base(){
-    base_raw();
+    if (use_minkowski) {
+        minkowski() {
+            base_raw();
+            sphere(r=minkowski_r, $fs=pin_fs, $fa=6);
+        }
+    } else {
+        base_raw();
+    }
 }
 
 // ----------------------------
@@ -128,18 +139,18 @@ module base(){
 // ----------------------------
 module clip_for_fragments(){
     if(test_fragment){
-        // Фрагмент у левого торца
+        // Фрагмент у нижнего торца (по Y)
         intersection(){
             children();
             translate([-eps(), -eps(), -frag_h_extra])
-                cube([frag_size, tot_w + 2*eps(), rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
+                cube([tot_w + 2*eps(), frag_size, rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
         }
-        // Фрагмент у правого торца
-        translate([frag_size + frag_gap_x, 0, 0])
+        // Фрагмент у верхнего торца (по Y)
+        translate([0, frag_size + frag_gap_x, 0])
             intersection(){
                 children();
-                translate([tot_l - frag_size, -eps(), -frag_h_extra])
-                    cube([frag_size + eps(), tot_w + 2*eps(), rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
+                translate([-eps(), tot_y - frag_size, -frag_h_extra])
+                    cube([tot_w + 2*eps(), frag_size + eps(), rail_h + end_stop_h + saddle_h + 2*frag_h_extra], center=false);
             }
     }else{
         children();
@@ -149,7 +160,7 @@ module clip_for_fragments(){
 // Вывод модели
 module flipped(){
     // Переворачиваем по Z так, чтобы низ был на Z=0
-    translate([0,0,total_h]) mirror([0,0,1]) base();
+    translate([0,0,0]) mirror([0,0,0]) base();
 }
 
 clip_for_fragments() flipped();
