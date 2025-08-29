@@ -1,12 +1,30 @@
-# OpenSCAD 3D Models
-
-A collection of small, self‑contained OpenSCAD models organized by date and slug. Each folder contains the source `.scad` and, optionally, exported `.stl` files.
+# 3D Models for LLM agents with OpenSCAD
 
 [All models index with previews at /models/ dir](models/README.md)
+
+Using this project, agents with LLM like GPT-5 can create 3D models on OpenSCAD for printing on a printer.
+
+Используя этот проект, агенты с LLM, например GPT-5, могут создавать 3D модели на OpenSCAD для печати на принтере.
+
+## Features:
+- Watch mode: `npm run watch`, recompile stl, png renders, use png as context for agent.
+- Create mode: `npm run create-project`, create new project, ask agent to create scad code for the project. In 
+- Docs everything: generated model descriptions, docs, page, list, README.md.
+- Generate everything: only name and human description are required. Define as more sizes and parameters as possible.
+- Shared library of modules: `modules.scad`.
+- Templates start with a good base structure.
 
 ## Requirements
 - OpenSCAD (GUI or CLI)
 - macOS/Linux/Windows. For Windows paths, set the binary in `.env`.
+
+## How to start
+- Clone repository in Cursor, Windsurf or Codex.
+- Ask agent to create model, `/create-model` in Windsurf and Cursor.
+- Ask agent to check png renders with `/check-renders`
+- Check other slash commands: `/simplify`, `/validate`
+- Run `npm run watch` to watch for changes and recompile stl, png renders, use png as context for agent for fixes.
+- Install recommended editor extension OpenSCAD for quick open scad file in OpenSCAD.
 
 ## Environment (.env)
 - __Setup__: Copy `.env.example` to `.env` and set `openscad_path`.

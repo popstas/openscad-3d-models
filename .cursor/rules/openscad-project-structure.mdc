@@ -1,0 +1,49 @@
+# OpenSCAD 3D Models Project Structure
+
+## Project Organization
+This repository contains parameterized 3D models created with OpenSCAD, optimized for 3D printing.
+
+### File Structure
+- **Models directory**: [models/](mdc:models/) - contains all 3D models
+- **Shared modules**: [models/modules.scad](mdc:models/modules.scad) - reusable functions and modules
+- **Project configuration**: [package.json](mdc:package.json) - build scripts and dependencies
+- **Agent guidelines**: [AGENTS.md](mdc:AGENTS.md) - comprehensive development guidelines
+
+### Model Organization
+Each model follows the pattern: `YYYY-MM-DD-short-slug/`
+- **Example**: `2025-08-24-ecig-platform/`
+- **Primary file**: `kebab-case.scad` (e.g., `ecig-platform.scad`)
+- **Optional exports**: `.stl` files and preview images
+- **Documentation**: `README.md` in each model folder
+
+### Creating New Models
+Use the npm script to create new projects:
+```bash
+npm run create-project "long name" "short-name"
+```
+
+This creates a new folder with the current date and the specified slug.
+
+## Key Files Reference
+- **Main README**: [README.md](mdc:README.md) - project overview and setup
+- **Agent Guidelines**: [AGENTS.md](mdc:AGENTS.md) - detailed development standards
+- **Models Index**: [models/README.md](mdc:models/README.md) - catalog of all models
+- **Shared Modules**: [models/modules.scad](mdc:models/modules.scad) - common functions
+
+## Development Workflow
+1. Create new project using `npm run create-project`
+2. Write README.md describing model fragments
+3. Create .scad file with proper structure
+4. Test with OpenSCAD GUI (F5/F6)
+5. Export STL when ready
+6. Commit with descriptive messages
+
+## Environment Setup
+- **OpenSCAD**: Required for development and preview
+- **Environment file**: Copy `.env.example` to `.env` and set `openscad_path`
+- **Units**: All measurements in millimeters
+- **File naming**: Use kebab-case for .scad files
+description:
+globs:
+alwaysApply: true
+---
