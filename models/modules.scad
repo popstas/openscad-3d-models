@@ -164,14 +164,20 @@ module rounded_prism(size=[10,10], h=1, r=0, kr=0){
 }
 
 module rounded_prism_with_pocket(size=[10,10], h=1, r=0, kr=0, wall_th=1, h_th=1, pocket_r=-1){
-        if (pocket_r < 0) {
-            pocket_r = r;
-        }
-        difference(){
-            rounded_prism(size=size, h=h, r=r, kr=kr);
-            translate([wall_th, wall_th, h_th])
-                rounded_prism(size=[size[0] - 2*wall_th, size[1] - 2*wall_th], h=h - h_th + eps(), r=pocket_r, kr=kr);
-        }
+    walls_th = wall_th * 2;
+    if (pocket_r < 0) {
+        pocket_r = r;
+    }
+    difference(){
+        rounded_prism(size=size, h=h, r=r, kr=kr);
+        translate([wall_th, wall_th, h_th])
+            rounded_prism(
+                size=[size[0] - walls_th, size[1] - walls_th],
+                h=h - h_th + eps(),
+                r=pocket_r,
+                kr=0
+            );
+    }
 }
     
 
