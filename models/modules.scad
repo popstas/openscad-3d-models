@@ -163,6 +163,19 @@ module rounded_prism(size=[10,10], h=1, r=0, kr=0){
     }
 }
 
+module rounded_prism_with_pocket(size=[10,10], h=1, r=0, kr=0, wall_th=1, h_th=1, pocket_r=-1){
+        if (pocket_r < 0) {
+            pocket_r = r;
+        }
+        difference(){
+            rounded_prism(size=size, h=h, r=r, kr=kr);
+            translate([wall_th, wall_th, h_th])
+                rounded_prism(size=[size[0] - 2*wall_th, size[1] - 2*wall_th], h=h - h_th + eps(), r=pocket_r, kr=kr);
+        }
+}
+    
+
+
 module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7, mink_r=0){
     if (mink_r > 0){
         // Preserve outer size/height by pre-insetting and post-minkowski with a sphere
@@ -330,3 +343,9 @@ function corner_offset(ix, L, W, s) =
 // Fallback helpers: safe defaults if model didn't define variables
 function eps() = 0.1;
 function fs_pin(x=undef) = is_undef(x) ? 0.25 : x;
+
+module upside_down(h){
+    translate([0, 0, h])
+        mirror([0, 0, 1])
+            children();
+}

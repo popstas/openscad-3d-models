@@ -1,39 +1,12 @@
 // =============================================
 // 3D: Mic Transceiver Box — inner 100x35x17, base + cap
-// Version: 1.0
+// Version: 1.1
 // Author: ChatGPT (OpenSCAD)
 // =============================================
 
 // Short description for models table
 description = "Mic Transceiver Box — inner 100x35x17, base + cap";
-
-// Shared library
-use <../modules.scad>
-
-// ----------------------------
-// Настройка точности
-// ----------------------------
-$fn = 0;        // фиксированную сегментацию отключаем
-$fa = 6;        // 5–8° обычно достаточно
-$fs = 0.35;     // ≈ диаметр сопла (0.3–0.5 для сопла 0.4)
-pin_fs = 0.25;  // чуть тоньше для штырей и отверстий
-
-// ----------------------------
-// Тестовые фрагменты (стандартный блок)
-// ----------------------------
-test_fragment = false;   // true — печатать только угловые фрагменты (base+cap)
-frag_size     = 20;      // размер квадрата вырезки, мм
-frag_index    = 0;       // 0=НЛ, 1=ВЛ, 2=НП, 3=ВП (относительно основания)
-frag_gap_x    = 10;      // зазор между фрагментами по X, мм
-frag_h_extra  = 20;      // запас по высоте клипа, мм
-
-// ----------------------------
-// Фаски/скругления по краям (совместимость)
-// ----------------------------
-edge_chamfer_z = 1;          // высота фаски по Z (мм)
-edge_chamfer_x = 0.8;        // горизонтальный вылет фаски по X (каждая сторона), мм
-edge_chamfer_y = 0.8;        // горизонтальный вылет фаски по Y (каждая сторона), мм
-screen_frame_gap = 0.2;      // совместимость
+version_str = "1.1";
 
 // ----------------------------
 // Параметры модели (мм)
@@ -56,6 +29,17 @@ cap_lip_h     = 5.0;        // глубина посадочного борта 
 print_base = true;
 print_cap  = true;
 
+// Shared library
+use <../modules.scad>
+
+// ----------------------------
+// Настройка точности
+// ----------------------------
+$fn = 0;        // фиксированную сегментацию отключаем
+$fa = 6;        // 5–8° обычно достаточно
+$fs = 0.35;     // ≈ диаметр сопла (0.3–0.5 для сопла 0.4)
+pin_fs = 0.25;  // чуть тоньше для штырей и отверстий
+
 // ----------------------------
 // Вычисляемые размеры
 // ----------------------------
@@ -72,9 +56,8 @@ cap_inner_r = base_outer_r + fit_clearance;  // радиус по внутрен
 
 cap_outer_x = cap_inner_x + 2*cap_wall_th;
 cap_outer_y = cap_inner_y + 2*cap_wall_th;
+cap_outer_h = cap_top_th + cap_lip_h;
 cap_outer_r = cap_inner_r + cap_wall_th;
-
-cap_h = cap_top_th + cap_lip_h;
 
 // ----------------------------
 // Комментарии / фрагменты
@@ -82,80 +65,39 @@ cap_h = cap_top_th + cap_lip_h;
 // Фрагменты:
 // - base: основание — лоток с закругленными углами и плоским дном
 // - cap: крышка — закрытый верх + борт нужной глубины, посадка по fit_clearance
-// - clip_for_fragments: при test_fragment=true выводит по одному угловому фрагменту base и cap
-
-// ----------------------------
-// Вспомогательные функции/модули
-// ----------------------------
-// Используются общие утилиты из ../modules.scad
-
 // ----------------------------
 // Фрагменты детали
 // ----------------------------
 module base_body(){
     difference(){
         // внешний корпус основания с фаской снизу
-        rounded_rect_extrude_bottom_chamfer([base_outer_x, base_outer_y], base_outer_r, base_outer_h, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
+        rounded_prism([base_outer_x, base_outer_y], base_outer_h, base_outer_r);
         // внутренняя полость
-        translate([0,0,bottom_th - eps()])
-            linear_extrude(height=inner_h + 2*eps())
-                rounded_rect([inner_x, inner_y], base_inner_r);
+        translate([wall_th,wall_th,bottom_th])
+            rounded_prism([inner_x, inner_y], inner_h, base_inner_r);
     }
 }
 
 module cap_shell(){
     difference(){
         // внешний объём крышки (без фаски сверху; опционально фаску снизу)
-        rounded_rect_extrude_bottom_chamfer([cap_outer_x, cap_outer_y], cap_outer_r, cap_h, edge_chamfer_z, edge_chamfer_x, edge_chamfer_y);
+        rounded_prism([cap_outer_x, cap_outer_y], cap_outer_h, cap_outer_r);
         // внутренняя полость на глубину борта
-        translate([0,0,0])
-            linear_extrude(height=cap_lip_h + eps())
-                rounded_rect([cap_inner_x, cap_inner_y], cap_inner_r);
+        translate([cap_wall_th, cap_wall_th, cap_top_th])
+            rounded_prism([cap_inner_x, cap_inner_y], cap_lip_h, cap_inner_r);
     }
 }
 
 // Главные детали
 module base(){ base_body(); }
 module cap(){ cap_shell(); }
-module cap_upside_down(){
-    translate([0, 0, cap_h])
-        mirror([0, 0, 1])
-            cap_shell();
-}
-
-module clip_for_fragments(){
-    if(test_fragment){
-        // Фрагмент основания
-        intersection(){
-            children(0);
-            ofs = corner_offset(frag_index, base_outer_x, base_outer_y, frag_size);
-            translate([ofs[0], ofs[1], -frag_h_extra])
-                cube([frag_size, frag_size, base_outer_h + 2*frag_h_extra], center=false);
-        }
-        // Фрагмент крышки — справа
-        translate([base_outer_x + frag_gap_x + frag_size, 0, 0])
-            intersection(){
-                children(1);
-                ofs2 = corner_offset(frag_index, cap_outer_x, cap_outer_y, frag_size);
-                translate([ofs2[0], ofs2[1], -frag_h_extra])
-                    cube([frag_size, frag_size, cap_h + 2*frag_h_extra], center=false);
-            }
-    }else{
-        // Полные детали
-        children();
+module all_parts(){
+    if (print_base) base();
+    if (print_cap) {
+        translate([0, base_outer_y + 10, 0]) cap();
     }
 }
-
 // ----------------------------
 // ВЫВОД МОДЕЛИ
 // ----------------------------
-if(test_fragment){
-    clip_for_fragments(){ base(); }{ cap(); }
-}else{
-    if (print_base) base();
-    if (print_cap) {
-        // translate([0, base_outer_y + 10, 0]) cap();
-        // translate([cap_outer_x + 10, base_outer_y + 10, 0]) cap_upside_down();
-        translate([0, base_outer_y + 10, 0]) cap_upside_down();
-    }
-}
+clip_for_fragments(){ all_parts(); }

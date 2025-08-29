@@ -1,12 +1,12 @@
 // =============================================
 // 3D: Audio Tools Case — base
-// Version: 1.0
+// Version: 2.0
 // Author: Cascade generator
 // =============================================
 
 // Short description for models table
 description = "Audio Tools Case — base";
-version_str = "1.0";
+version_str = "2.0";
 
 // ----------------------------
 // Параметры модели (все размеры в мм)
@@ -165,13 +165,6 @@ module cap(){
     }
 }
 
-// Разворот крышки вверх дном для печати (лежит плоской верхней стороной на столе)
-module cap_upside_down(){
-    translate([0, 0, cap_h])
-        mirror([0, 0, 1])
-            cap();
-}
-
 // Вывод всех фрагментов
 // ----------------------------
 module all_parts(){
@@ -180,7 +173,7 @@ module all_parts(){
     y_shift = (print_box && print_cap) ? (outer_y + x_gap) : 0;
 
     if (print_box) translate([0, 0, 0]) base();
-    if (print_cap) translate([0, y_shift, 0]) cap_upside_down();
+    if (print_cap) translate([0, y_shift, 0]) upside_down(cap_h) cap();
 }
 
 // ----------------------------

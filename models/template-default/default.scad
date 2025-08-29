@@ -19,13 +19,13 @@ version_str = "1.0";
 base_x = 50; // ширина X, мм, width
 base_y = 100; // глубина Y, мм, глубина при pow: XZ
 base_z = 30; // высота Z, мм
-base_th = 4; // толщина стенок
+base_th = 1.6; // толщина стенок
 radius_r = 3; // скругление
-base_mink_r = 3; // сферическое сглаживание краёв
+mink_r = 3;
 
 // Включение деталей для вывода
 print_base = true; // print base
-print_cap = false; // print cap
+print_cap = true; // print cap
 // TODO: print vars for each detail
 
 // ----------------------------
@@ -44,68 +44,44 @@ $fs = 0.35;     // ≈ диаметр сопла (0.3–0.5 для сопла 0.
 pin_fs = 0.25;  // чуть тоньше для штырей и отверстий
 
 // ----------------------------
-// Тестовые фрагменты (стандартный блок)
-// ----------------------------
-test_fragment = false;   // true — печатать только угловые фрагменты (base+frame)
-frag_size     = 20;      // размер квадрата вырезки, мм
-frag_index    = 0;       // 0=НЛ, 1=ВЛ, 2=НП, 3=ВП (относительно основания)
-frag_gap_x    = 10;      // зазор между фрагментами по X, мм
-frag_h_extra  = 20;      // запас по высоте клипа, мм
-
-// ----------------------------
 // Вычисляемые переменные
 // ----------------------------
 // TODO:
 walls_th = 2 * base_th;
-cap_x = base_x;
-cap_y = base_y;
+cap_x = base_x + walls_th + walls_th;
+cap_y = base_y + walls_th + walls_th;
+cap_th = base_th;
+cap_z = cap_th * 3;
 
 // ----------------------------
 // Модули фрагментов модели
 // ----------------------------
 module base(){
-    difference(){
-        rounded_rr_extrude(
-            size=[base_x, base_y],
-            r=radius_r,
-            h=base_z,
-            s=1,
-            mink_r=base_mink_r // сферическое сглаживание краёв
-        );
-        pocket_cut();
-    }
-}
-
-// cut from top, to make desired base_th walls
-module pocket_cut(){
-    translate([base_th, base_th, base_th])
-        rounded_rr_extrude(
-            size=[
-                base_x - walls_th,
-                base_y - walls_th
-            ],
-            r=radius_r,
-            h=base_z,
-            s=1,
-            mink_r=base_mink_r
-        );
+    rounded_prism_with_pocket(
+        size=[base_x, base_y],
+        h=base_z,
+        r=radius_r,
+        kr=mink_r,
+        wall_th=base_th,
+        h_th=base_th
+    );
 }
 
 module cap(){
-    translate([cap_x + walls_th, 0, 0])
-        rounded_rr_extrude(
-            size=[cap_x, cap_y],
-            r=radius_r,
-            h=base_th,
-            s=1,
-            mink_r=base_mink_r
-        );
+    rounded_prism_with_pocket(
+        size=[cap_x, cap_y],
+        h=cap_z,
+        r=radius_r,
+        kr=mink_r,
+        wall_th=cap_th,
+        h_th=cap_th
+    );
 }
 
 // Вывод всех деталей
 module all_details(){
     if(print_base) base();
-    if(print_cap) cap();
+    if(print_cap) translate([cap_x + walls_th, -cap_th, 0]) cap();
 }
 
 // Final rotate/translate
