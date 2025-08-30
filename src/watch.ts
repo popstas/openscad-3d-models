@@ -434,12 +434,14 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
   const outT = tStat ? fmt(tStat.mtimeMs) : 'missing';
   process.stdout.write(`mtime src ${srcT}, stl ${outT}\n`);
 
+  const tasks = [];
+
   building.add(scad);
   process.stdout.write(`Rendering: ${path.relative(ROOT, scad)} -> ${path.relative(ROOT, stl)}\n`);
   try {
     fs.mkdirSync(path.dirname(stl), { recursive: true });
     if (needStl) {
-      await render(scad, stl);
+      tasks.push(render(scad, stl));
       console.log(`Built: ${path.relative(ROOT, stl)}`);
     }
     if (needPng) {
@@ -448,9 +450,10 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
         if (st && st.mtimeMs >= sStat.mtimeMs) continue;
         fs.mkdirSync(path.dirname(png), { recursive: true });
         console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
-        await renderPngWithNormalize(scad, png, v);
+        tasks.push(renderPngWithNormalize(scad, png, v));
       }
     }
+    await Bluebird.all(tasks);
     return 'built';
   } catch (e) {
     console.error(`Error rendering ${scad}:`, (e as Error).message);
