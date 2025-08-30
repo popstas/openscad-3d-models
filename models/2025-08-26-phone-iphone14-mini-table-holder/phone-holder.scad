@@ -17,17 +17,17 @@ version_str = "2.0";
 // ----------------------------
 // Параметры модели (все размеры в мм)
 // ----------------------------
-is_small = true;
-phone_w = is_small ? 10 : 66;          // ширина телефона по X
+is_small = false;
+phone_w = is_small ? 66 : 66; // ширина телефона по X, с боковыми кнопками
 phone_h_gap = 10;
-phone_h = is_small ? 10 : 131 - phone_h_gap;         // высота телефона (идёт в глубину кармана) по Y
-phone_th = is_small ? 10 : 8;          // толщина телефона по Z
-notch_camera_z = is_small ? 5 : 32 - phone_h_gap;
+phone_h = is_small ? 20 : 131 - phone_h_gap; // высота телефона (идёт в глубину кармана) по Y
+phone_th = is_small ? 8 : 8; // толщина телефона по Z
+notch_camera_z = is_small ? phone_h - 10 : 32 - phone_h_gap;
 
 // Зазоры кармана (внутренние)
-pocket_clear_x = 0; // общий запас по X (ширина) — суммарно (0 для точного соответствия)
-pocket_clear_y = 0; // запас по Y (толщина)
-pocket_clear_z = 0; // запас по Z (толщина)
+pocket_clear_x = 0.4; // общий запас по X (ширина) — суммарно (0 для точного соответствия)
+pocket_clear_y = 0.4; // запас по Y (толщина)
+pocket_clear_z = 0; // запас по Z (высота)
 
 // Стенки/толщины
 wall_xy  = is_small ? 2 : 1.6;  // толщина боковой стенки (X/Y)
@@ -55,13 +55,12 @@ pin_fs = 0.25;  // чуть тоньше для штырей и отверсти
 // ----------------------------
 // Вычисляемые переменные
 // ----------------------------
-// TODO:
 inner_x = phone_w + pocket_clear_x;
 inner_y = phone_th + pocket_clear_y;
 inner_z = phone_h + pocket_clear_z;
 outer_x = inner_x + 2 * wall_xy;
 outer_y = inner_y + 2 * wall_xy;
-outer_z = inner_z + 2 * wall_z;
+outer_z = inner_z + wall_z;
 
 // ----------------------------
 // Модули фрагментов модели
