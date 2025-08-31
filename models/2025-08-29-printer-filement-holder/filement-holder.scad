@@ -16,28 +16,34 @@ version_str = "1.0";
 // Параметры модели
 // ----------------------------
 // Главные размеры из ТЗ:
-base_pad_d = 60;    // диаметр основания, мм
-base_pad_h = 2;     // высота основания, мм
-
-body_outer_d = 45;  // внешний диаметр корпуса (труба), мм
-body_h = 77;        // высота корпуса, мм
-wall_th = 2.0;      // толщина стенки трубы, мм (Уточнить!)
+base_pad_d = 65;    // диаметр основания, мм
+base_pad_h = 7;     // высота основания, мм
 
 hook_d = 50;        // диаметр верхнего диска ("hook"), мм
-hook_h = 5;         // высота верхнего диска, мм
-hook_kr = 3.0;      // радиус скругления краёв hook через Minkowski (0 = без)
+hook_h = 6;         // высота верхнего диска, мм
+hook_kr = 9;      // радиус скругления краёв hook через Minkowski (0 = без)
+hook_z_inset = 8;   // наезд hook на основание, мм
+hole_d = 5;         // диаметр центрального отверстия, мм
 
-// Фаски/скругления
-edge_ch = 0.8;      // фаска по верхнему краю трубы, мм (0 = без фаски)
-tiny = 0.1;         // eps helper for booleans
+body_outer_d = 40;  // внешний диаметр корпуса (труба), мм
+body_h = 75 + 2 + hook_z_inset;        // высота корпуса, мм
+wall_th = 2.0;      // толщина стенки трубы, мм (Уточнить!)
+
+// Кольцевая выборка снизу основания (паз): наружный 55, внутренний 45, h=0.6
+bottom_ring_inner_d = 41.5; //44;   // внутренний диаметр паза, мм
+bottom_ring_outer_d = 58;   // внешний диаметр паза, мм
+bottom_ring_h       = 5.6;  // высота (глубина) паза, мм
 
 // Включение деталей для вывода
 print_base = true;
 print_body = true;
 print_top_hook = true;
+print_bottom_ring = true;   // вспомогательный фрагмент: показать кольцо-паз (для проверки)
+print_hole = true;          // делать сквозное отверстие через base и hook
 
 // ----------------------------
-
+// Вычисляемые переменные
+outer_z = base_pad_h + body_h + hook_h;
 
 
 
@@ -74,35 +80,61 @@ module rounded_cyl(d=10, h=5, kr=0){
 // Вычисляемые переменные
 // ----------------------------
 inner_d = max(body_outer_d - 2*wall_th, 0.5);
-ch = clamp(edge_ch, 0, body_h/2);
 
 // ----------------------------
 // Модули фрагментов модели
 // ----------------------------
 module base(){
     // Основание: сплошной диск Ø60, h=2
-    cylinder(h=base_pad_h, d=base_pad_d);
+    difference(){
+        cylinder(h=base_pad_h, d=base_pad_d);
+        if(print_bottom_ring) bottom_ring();
+    }
 }
 
 module body(){
         // Прямая часть стенки (до начала фаски)
         difference(){
             cylinder(h=max(body_h, eps()), d=body_outer_d);
-            translate([0,0,-eps()]) cylinder(h=max(body_h, eps()) + 2*eps(), d=inner_d);
+            // translate([0,0,-eps()]) cylinder(h=max(body_h, eps()) + 2*eps(), d=inner_d);
         }
 }
 
 module top_hook(){
     // Верхний диск ("hook"): сплошной цилиндр Ø50, h=5
-    rounded_cyl(hook_d, hook_h, hook_kr);
+    difference(){
+        rounded_cyl(hook_d, hook_h, hook_kr);
+        // сквозное центральное отверстие Øhole_d
+        if(print_hole)
+            translate([0,0,-eps()])
+                cylinder(h=hook_h + 2*eps(), d=hole_d, $fs=pin_fs, $fa=6);
+    }
+}
+
+// Тонкое кольцо для выборки снизу основания (для difference())
+// Размещено от z=0 вверх на bottom_ring_h, чтобы вычитать «снизу» основания
+module bottom_ring(){
+    difference(){
+        cylinder(h=bottom_ring_h, d=bottom_ring_outer_d);
+        translate([0,0,-eps()]) cylinder(h=bottom_ring_h + 2*eps(), d=bottom_ring_inner_d);
+    }
 }
 
 // Вывод всех деталей
-module all_details(){
+module all_details_without_hole(){
     // Стек деталей по Z: base -> body -> top_hook
     if (print_base) base();
     if (print_body) translate([0,0,base_pad_h]) body();
-    if (print_top_hook) translate([0,0,base_pad_h + body_h]) top_hook();
+    if (print_top_hook) translate([0,0,base_pad_h + body_h - hook_z_inset]) top_hook();
+}
+
+module all_details(){
+    if (print_hole)
+        difference(){
+            all_details_without_hole();
+            translate([0,0,-eps()]) cylinder(h=outer_z + 2*eps() + 10, d=hole_d, $fs=pin_fs, $fa=6);
+        }
+    else all_details_without_hole();
 }
 
 // Final rotate/translate
