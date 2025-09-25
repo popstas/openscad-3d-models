@@ -5,7 +5,7 @@
 // =============================================
 
 // Short description for models table
-description = "Audio Tools Case — base";
+description = "";
 
 // Shared library
 use <../modules.scad>

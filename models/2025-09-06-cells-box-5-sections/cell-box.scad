@@ -5,7 +5,7 @@
 // =============================================
 
 // Short description for models table
-description = "Audio Tools Case — base";
+description = "Cells Box 5 Sections";
 version_str = "2.0";
 
 // ----------------------------
@@ -54,7 +54,7 @@ y_delta       = 0;     // каждая секция по Y шире, чем на
 
 // Флаги печати
 print_box = true;     // печатать основание (лоток)
-print_labels = false;     // печатать надписи
+print_labels = true;     // печатать надписи
 print_cap = false;     // печатать крышку
 
 

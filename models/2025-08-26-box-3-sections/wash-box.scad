@@ -1,11 +1,5 @@
-// =============================================
-// 3D: Audio Tools Case — base
-// Version: 2.0
-// Author: Cascade generator
-// =============================================
-
 // Short description for models table
-description = "Audio Tools Case — base";
+description = "";
 version_str = "2.0";
 
 // ----------------------------

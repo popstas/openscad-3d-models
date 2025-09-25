@@ -5,7 +5,7 @@
 // =============================================
 
 // Short description for models table
-description = "Mic Transceiver Box — inner 100x35x17, base + cap";
+description = "";
 version_str = "1.1";
 
 // ----------------------------

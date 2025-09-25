@@ -688,6 +688,7 @@ function renderModelsTable(models: ModelMeta[]): string {
   lines.push('| Info | Description | Preview 1 | Preview 2 |');
   lines.push('| ---- | ----------- | --------- | --------- |');
   for (const m of models) {
+    if (!m.description) continue;
     const url = m.scadRel.replace('models/', '');
     const parts = url.split('/');
     const folder = parts[0] || '';

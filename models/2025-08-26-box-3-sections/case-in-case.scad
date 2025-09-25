@@ -5,7 +5,7 @@
 // =============================================
 
 // Short description for models table
-description = "Box in safe";
+description = "";
 version_str = "2.0";
 
 // ----------------------------
