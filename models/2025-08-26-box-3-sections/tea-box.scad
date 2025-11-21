@@ -16,9 +16,9 @@ version_str = "2.0";
 
 is_small = false;
 // Ширины отсеков (по X). Любое количество
-sections_x = is_small ? [10, 20, 30] : [45];
+sections_x = is_small ? [10, 20, 30] : [32, 32];
 // глубина по Y
-inner_y    = is_small ? 20 : 131;
+inner_y    = is_small ? 20 : 65;
 // внутренняя глубина во всех отсеках
 inner_h    = is_small ? 10 : 45;
     
@@ -49,7 +49,7 @@ y_delta       = 0;     // каждая секция по Y шире, чем на
 
 // Флаги печати
 print_box = true;     // печатать основание (лоток)
-print_cap = true;     // печатать крышку
+print_cap = false;     // печатать крышку
 
 
 
