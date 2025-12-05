@@ -16,8 +16,8 @@ version_str = "1.0";
 // Параметры модели (position: front at XZ axis, top view at XY, side view at YZ)
 // base x, y, z указаны для внешних габаритов. Внутренние размеры меньше на ширину стенок
 // ----------------------------
-base_x = 140.9; // ширина X, мм, width
-base_y = 52; // глубина Y, мм
+base_x = 143; // ширина X, мм, width
+base_y = 55; // глубина Y, мм
 base_z = 1.2; // толщина пластины по Z, мм
 base_h = base_z; // для clip_for_fragments()
 base_th = 1; // толщина стенки (не используется здесь)
@@ -25,26 +25,26 @@ radius_r = 8; // скругление только у нижних углов
 mink_r = 0; // не используется
 
 // Отверстия
-big_hole_x = 16.9;  // мм (от левого края)
-big_hole_y = 36;    // мм (от нижнего края)
-big_hole_d = 6.3;   // мм
+big_hole_x = 17.9;  // 16.9 мм (от левого края)
+big_hole_y = 38;    // 34 мм (от нижнего края)
 
-small_hole_x = 127; // мм
-small_hole_y = 11;  // мм
-small_hole_d = 3.5; // мм
+small_hole_x = 128; // 127 мм
+small_hole_y = 14;  // 11 мм
 
 // Джек-модули (отдельные детали рядом с основной пластиной)
 height_to_body = 15; // высота над плоскостью
-height_to_deep = 7; // глубина под плоскостью (суммарная высота = 30)
-small_jack_d = 3.5 + 0.1;
-big_jack_d   = 6.3 + 0.1;
-small_jack_cap_d = 7;    // как указано
-big_jack_cap_d   = 12.6; // 2x 6.3
-jack_cap_th = 0.8;
+height_to_deep = 3; // глубина под плоскостью (суммарная высота = 30)
+small_jack_d = 3.5 + 0.2;
+big_jack_d   = 6.3 + 0.3;
+small_hole_d = small_jack_d - 0.1;
+big_hole_d = big_jack_d - 0.1;
+small_jack_cap_d = small_hole_d * 1.5; // диаметр маленькой шляпки
+big_jack_cap_d   = big_hole_d * 1.5; // диаметр большой шляпки
+jack_cap_th = 0.6;
 
 // Флаги печати
 print_body  = true;  // печатать основную пластину
-print_jacks = true;  // печатать джек-цилиндры и их крышки
+print_jacks = false;  // печатать джек-цилиндры и их крышки
 
 // Включение деталей для вывода
 print_base = true; // print base
