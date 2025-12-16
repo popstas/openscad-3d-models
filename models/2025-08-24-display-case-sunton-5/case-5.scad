@@ -33,7 +33,7 @@ frag_h_extra  = 20;     // запас по высоте клипа, мм
 //   индексы углов: 0=Нижний Левый, 1=Верхний Левый, 2=Нижний Правый, 3=Верхний Правый
 
 // ===== Выбор печатаемых деталей =====
-print_base  = true;     // печатать основание
+print_base  = false;     // печатать основание
 print_frame = true;     // печатать рамку
 
 // ===== Общие доп. параметры =====
@@ -57,7 +57,7 @@ base_thickness = 3;          // толщина основания, мм
 base_edge_multiplier = 0;     // 
 
 frame_thickness = 5;         // толщина рамки, мм
-window_clearance_x = 0.5;      // припуск (каждая сторона) к окну под экран, мм
+window_clearance_x = 0.4;      // припуск (каждая сторона) к окну под экран, мм
 window_clearance_y = 0.8;
 
 // ===== Параметры крепёжных отверстий, стоек и штырей =====
@@ -180,5 +180,5 @@ if (test_fragment) {
     }
 } else {
     if (print_base) basePlate();
-    if (print_frame) translate([0, base_height + 10, 0]) screenFrame();
+    if (print_frame) translate([base_width + 5, 0, 0]) screenFrame();
 }
