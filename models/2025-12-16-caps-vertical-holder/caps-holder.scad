@@ -33,6 +33,10 @@ max_h         = 80;      // ограничение по высоте всей д
 use_minkowski = false;    // включить скругление краёв
 minkowski_r   = 1;       // радиус сферы для скругления, мм
 
+// Параметры mesh стенок
+mesh_side     = 10;      // сторона ромба, мм
+mesh_width    = 5;       // ширина линии ромба, мм
+
 // ----------------------------
 // Настройка точности
 // ----------------------------
@@ -72,21 +76,92 @@ function cap_center_x(i) = end_stop_th + wall_th + cap_width/2 + i * (cap_width 
 // ----------------------------
 // Вспомогательные модули
 // ----------------------------
+// Модуль для создания параллельных полос под углом (для mesh)
+module mesh_strips_2d(w, h, line_w, pitch, angle_deg) {
+    // Длина полосы должна перекрывать всю диагональ + запас
+    L = sqrt(w*w + h*h) + 4*line_w;
+    
+    // Сколько полос нужно: покрываем область по перпендикуляру
+    // Для ±45° достаточно ориентироваться на (w+h).
+    n = ceil((w + h) / pitch) + 4;
+    
+    rotate(angle_deg)
+        for (i = [-n : n])
+            translate([0, i*pitch])
+                square([L, line_w], center=true);
+}
+
+// Модуль для создания 2D mesh паттерна (ромбики)
+// Создает паттерн, который покрывает всю область от [0,0] до [w,h]
+module mesh_pattern_2d(w, h, side, line_width, angle=45) {
+    pitch = side + line_width;
+    
+    // Создаем паттерн, центрированный в начале координат
+    intersection() {
+        union() {
+            mesh_strips_2d(w, h, line_width, pitch,  angle);
+            mesh_strips_2d(w, h, line_width, pitch, -angle);
+        }
+        square([w, h], center=true);
+    }
+}
+
+// Модуль для создания mesh стены с ромбиками
+// Параметры:
+//   width_x - ширина стены по X, мм
+//   width_y - ширина стены по Y, мм
+//   height_z - высота стены по Z, мм
+//   side - сторона ромба, мм
+//   line_width - ширина линии ромба, мм
+module mesh_wall(width_x, width_y, height_z, side=mesh_side, line_width=mesh_width) {
+    // Паттерн центрирован в начале координат, перемещаем его так, чтобы покрыть всю стену от [0,0] до [width_x, width_y]
+    translate([width_x/2, width_y/2, 0])
+        linear_extrude(height=height_z) {
+            mesh_pattern_2d(width_x, width_y, side, line_width, 45);
+        }
+}
+
 // Цилиндрический вырез для крышки (вдоль оси X)
 module cylinder_cutter(center_x){
-    // Цилиндр проходит вдоль оси X, ограничен по длине cap_width, поднят на радиус по Z
-    // Длина цилиндра = ширина крышки (для каждой крышки отдельный цилиндр)
-    translate([center_x - cap_width/2, tot_y/2, holder_height/2 + cap_radius / 2 + wall_th * 6])
+    // Цилиндр проходит вдоль оси X, для вырезания места под крышку
+    // Крышка должна быть врезана в пол, поэтому цилиндр начинается от Z=0
+    translate([center_x - cap_width/2, tot_y/2, 0])
         rotate([0, 90, 0])
             cylinder(h = cap_width + 2*tiny, d = cap_diam, $fs=pin_fs, $fa=6);
 }
 
-// Торцевые упоры по X
+// Торцевые упоры по X (mesh стены)
+// Создаем mesh стены, которые покрывают всю высоту и длину по Y
 module end_stop(){
-    // у левого края
-    translate([0, 0, 0]) cube([end_stop_th, tot_y, holder_height], center=false);
-    // у правого края
-    translate([tot_x - end_stop_th, 0, 0]) cube([end_stop_th, tot_y, holder_height], center=false);
+    // у левого края - mesh стена по всей высоте и длине
+    translate([0, 0, 0]) 
+        rotate([0, 0, 0])
+            mesh_wall(end_stop_th, tot_y, holder_height, mesh_side, mesh_width);
+    // у правого края - mesh стена по всей высоте и длине
+    translate([tot_x - end_stop_th, 0, 0]) 
+        rotate([0, 0, 0])
+            mesh_wall(end_stop_th, tot_y, holder_height, mesh_side, mesh_width);
+}
+
+// Боковые стенки по Y (mesh стены)
+// Создаем mesh стены в плоскости XZ, которые покрывают всю ширину по X и высоту по Z
+module side_walls(){
+    // Левая боковая стенка (Y=0)
+    // mesh_wall создает паттерн в XY плоскости, экструдирует по Z
+    // Нужно повернуть так, чтобы паттерн был в XZ плоскости, экструзия по Y
+    translate([0, 0, 0])
+        rotate([90, 0, 0])
+            translate([tot_x/2, holder_height/2, 0])
+                linear_extrude(height=wall_th) {
+                    mesh_pattern_2d(tot_x, holder_height, mesh_side, mesh_width, 45);
+                }
+    // Правая боковая стенка (Y=tot_y)
+    translate([0, tot_y, 0])
+        rotate([90, 0, 0])
+            translate([tot_x/2, holder_height/2, 0])
+                linear_extrude(height=wall_th) {
+                    mesh_pattern_2d(tot_x, holder_height, mesh_side, mesh_width, 45);
+                }
 }
 
 // Объединение всех выемок
@@ -96,9 +171,10 @@ module cradle_cuts(){
     }
 }
 
-// Основной корпус
+// Основной корпус (solid floor - только нижняя часть)
 module deck_core(){
-    cube([tot_x, tot_y, holder_height], center=false);
+    // Создаем только тонкий пол, не всю высоту
+    cube([tot_x, tot_y, 1], center=false);
 }
 
 // Полная сборка
@@ -108,6 +184,7 @@ module base_raw(){
             union(){
                 deck_core();
                 end_stop();
+                side_walls();
             }
             cradle_cuts();
         }
