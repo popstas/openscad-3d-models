@@ -44,7 +44,7 @@ function listScadFiles(dir: string): string[] {
     let entries: fs.Dirent[] = [];
     try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
     for (const e of entries) {
-      if (e.name === 'node_modules' || e.name === '.git' || e.name === 'dist') continue;
+      if (e.name === 'node_modules' || e.name === '.git' || e.name === 'dist' || e.name === 'BOSL2') continue;
       const p = path.join(d, e.name);
       if (e.isDirectory()) stack.push(p);
       else if (e.isFile() && p.toLowerCase().endsWith('.scad')) out.push(p);
@@ -67,6 +67,17 @@ async function render(scad: string, stl: string): Promise<void> {
   }
   // Resolve immediately
   return;
+}
+
+function renderStl(scad: string, stl: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const args = ['-o', stl, scad];
+    const child = spawn(OPENSCAD_CMD, args, { stdio: 'inherit' });
+    child.on('exit', (code) => {
+      if (code === 0) resolve(); else reject(new Error(`openscad exit ${code}`));
+    });
+    child.on('error', reject);
+  });
 }
 
 type CamView = { name: string; camera: string; projection: 'o' | 'p' };
@@ -94,7 +105,7 @@ function renderPng(scad: string, png: string, cam: CamView): Promise<void> {
     ];
     // Debug: print full command line
     const cmdline = [OPENSCAD_CMD, ...args.map(a => (a.includes(' ') ? `"${a}"` : a))].join(' ');
-    console.log('PNG cmd:', cmdline);
+    // console.log('PNG cmd:', cmdline);
     const child = spawn(OPENSCAD_CMD, args, { stdio: 'inherit' });
     child.on('exit', (code) => {
       if (code === 0) resolve(); else reject(new Error(`openscad exit ${code}`));
@@ -440,20 +451,23 @@ async function buildIfOutdated(scad: string): Promise<'built' | 'skipped' | 'fai
   process.stdout.write(`Rendering: ${path.relative(ROOT, scad)} -> ${path.relative(ROOT, stl)}\n`);
   try {
     fs.mkdirSync(path.dirname(stl), { recursive: true });
+    // Generate STL first
     if (needStl) {
-      tasks.push(render(scad, stl));
+      await renderStl(scad, stl);
       console.log(`Built: ${path.relative(ROOT, stl)}`);
     }
+    // Then generate PNGs
     if (needPng) {
+      const pngTasks = [];
       for (const { v, path: png } of pngs) {
         const st = statSafe(png);
         if (st && st.mtimeMs >= sStat.mtimeMs) continue;
         fs.mkdirSync(path.dirname(png), { recursive: true });
         console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
-        tasks.push(renderPngWithNormalize(scad, png, v));
+        pngTasks.push(renderPngWithNormalize(scad, png, v));
       }
+      await Bluebird.all(pngTasks);
     }
-    await Bluebird.all(tasks);
     return 'built';
   } catch (e) {
     console.error(`Error rendering ${scad}:`, (e as Error).message);
@@ -532,7 +546,7 @@ const watchedFiles = new Set<string>();
 const dirWatchers = new Map<string, fs.FSWatcher>();
 
 function isIgnoredBase(base: string): boolean {
-  return base === 'node_modules' || base === '.git' || base === 'dist';
+  return base === 'node_modules' || base === '.git' || base === 'dist' || base === 'BOSL2';
 }
 
 function listDirs(dir: string): string[] {
