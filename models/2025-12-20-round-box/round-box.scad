@@ -63,8 +63,8 @@ test_cut_d     = 20;      // диаметр вырезки в середине c
 print_test_cut = false;   // true - делать вырез в середине cap_inner_d - test_cut_d
 
 // Включение деталей для вывода
-print_base = true;        // печатать коробку
-print_cap  = false;        // печатать крышку
+print_base = false;        // печатать коробку
+print_cap  = true;        // печатать крышку
 
 // ===== Вычисляемые размеры =====
 box_inner_r = box_inner_diam / 2;
