@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenSCAD Validate"
+  short_description: "Review SCAD modules, dimensions, and suspicious constants."
+  default_prompt: "Use $openscad-validate to review an OpenSCAD model for hardcoded dimensions and structure issues."

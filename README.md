@@ -20,11 +20,19 @@ Using this project, agents with LLM like GPT-5 can create 3D models on OpenSCAD 
 
 ## How to start
 - Clone repository in Cursor, Windsurf or Codex.
-- Ask agent to create model, `/create-model` in Windsurf and Cursor.
-- Ask agent to check png renders with `/check-renders`
-- Check other slash commands: `/simplify`, `/validate`
+- Ask agent to create a model with `$openscad-create-model`.
+- Ask agent to check png renders with `$openscad-check-renders`.
+- Use `$openscad-simplify` and `$openscad-validate` for refactoring and review.
 - Run `npm run watch` to watch for changes and recompile stl, png renders, use png as context for agent for fixes.
 - Install recommended editor extension OpenSCAD for quick open scad file in OpenSCAD.
+
+## Agent skills
+Project skills live in `.claude/skills`. The `.agents/skills` path is a symlink to the same directory, so agents that scan `.agents` can discover the same workflows.
+
+- `$openscad-create-model` — create a new dated model folder from the template, write the model README first, then implement the SCAD file with the required project structure.
+- `$openscad-check-renders` — reopen `preview.iso.png`, `preview.xy.png`, and other render images after SCAD changes, compare expected and actual geometry, and fix visual mismatches.
+- `$openscad-simplify` — simplify SCAD code while preserving geometry, especially by replacing repeated local code with variables, loops, or helpers from `modules.scad`.
+- `$openscad-validate` — review a model technically: describe its modules, find suspicious or hardcoded numbers, check required parameters, and suggest concrete fixes.
 
 ## Environment (.env)
 - __Setup__: Copy `.env.example` to `.env` and set `openscad_path`.
@@ -58,6 +66,8 @@ npm run create-project printer-ceiling-support printer-ceiling
 - `YYYY-MM-DD-short-slug/` — one folder per model
   - `model-name.scad` — primary OpenSCAD source
   - `model-name.stl` — optional export (may be git‑ignored)
+- `.claude/skills/` — project skills for model creation, render checking, simplification, and validation
+- `.agents/skills` — symlink to `.claude/skills`
 - `AGENTS.md` — contributor guidelines
 
 - __Windows notes__:

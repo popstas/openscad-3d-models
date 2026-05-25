@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenSCAD Check Renders"
+  short_description: "Inspect preview renders and fix SCAD geometry issues."
+  default_prompt: "Use $openscad-check-renders to inspect preview renders for an OpenSCAD model."

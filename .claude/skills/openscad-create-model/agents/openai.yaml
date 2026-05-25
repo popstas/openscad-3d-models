@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenSCAD Create Model"
+  short_description: "Create a model project from the repo template."
+  default_prompt: "Use $openscad-create-model to create a new OpenSCAD model in this repository."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenSCAD Simplify"
+  short_description: "Simplify model code while preserving geometry."
+  default_prompt: "Use $openscad-simplify to simplify an OpenSCAD model without changing geometry."
