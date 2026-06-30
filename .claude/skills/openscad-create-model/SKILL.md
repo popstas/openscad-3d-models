@@ -33,4 +33,24 @@ npm run create-project long-name short-name
 
 ## Completion
 
-Before finishing, remove template TODOs, check that filenames match the folder slug, and run the most relevant OpenSCAD render/export command available in the project.
+Before finishing, remove template TODOs and check that filenames match the folder slug.
+
+Then export the STL and render the four preview images. The generator only writes 1×1
+placeholder PNGs — render the real ones. The canonical camera params live in `src/watch.ts`
+(`PNG_VIEWS`); replicate them for a one-shot render:
+
+```bash
+# manifold check (expect "Simple: yes")
+openscad -o NAME.stl NAME.scad
+# previews (run per view): VIEW/PROJ/CAMERA =
+#   iso p 0,0,0,55,0,25,500 | xy o 0,0,0,0,0,0,500 | xz p 0,0,0,90,0,0,500 | yz p 0,0,0,0,90,0,500
+openscad -o preview.VIEW.png --imgsize=1200,900 --projection=PROJ \
+  --camera=CAMERA --render --viewall --autocenter --view=axes NAME.scad
+```
+
+Read the rendered PNGs and confirm the geometry matches the README before declaring done.
+`npm run watch` (a continuous watcher, no one-shot flag) regenerates STL + previews and the
+global `models/README.md` index — that index is auto-generated, so don't hand-edit it.
+
+If the previews aren't rendering/updating, start `npm run watch` in the background and let it
+regenerate them; the project's normal workflow expects the watcher to be running.
