@@ -1,0 +1,46 @@
+{
+  "model": "incense-holder-65mm.scad",
+  "dims": [
+    66.24,
+    66.24,
+    41.5
+  ],
+  "bbox": {
+    "min": [
+      -33.12,
+      -33.12,
+      0
+    ],
+    "max": [
+      33.12,
+      33.12,
+      41.5
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        66.24,
+        66.24,
+        41.5
+      ],
+      "offset": [
+        -33.12,
+        -33.12,
+        0
+      ],
+      "volume_cm3": 7.236,
+      "facets": 2846
+    }
+  ],
+  "facets": 2846,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 1703,
+    "vertices": 1537,
+    "warnings": []
+  },
+  "expected": null
+}

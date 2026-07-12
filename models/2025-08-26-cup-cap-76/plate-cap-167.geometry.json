@@ -1,0 +1,46 @@
+{
+  "model": "plate-cap-167.scad",
+  "dims": [
+    168.59,
+    168.59,
+    7.78
+  ],
+  "bbox": {
+    "min": [
+      -84.29,
+      -84.3,
+      0
+    ],
+    "max": [
+      84.3,
+      84.3,
+      7.78
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        168.59,
+        168.59,
+        7.78
+      ],
+      "offset": [
+        -84.29,
+        -84.3,
+        0
+      ],
+      "volume_cm3": 38.159,
+      "facets": 20436
+    }
+  ],
+  "facets": 20436,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 10454,
+    "vertices": 10222,
+    "warnings": []
+  },
+  "expected": null
+}

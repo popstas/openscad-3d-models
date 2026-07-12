@@ -1,0 +1,46 @@
+{
+  "model": "cup-cap-100.scad",
+  "dims": [
+    102.09,
+    102.09,
+    9.78
+  ],
+  "bbox": {
+    "min": [
+      -51.04,
+      -51.05,
+      0
+    ],
+    "max": [
+      51.05,
+      51.05,
+      9.78
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        102.09,
+        102.09,
+        9.78
+      ],
+      "offset": [
+        -51.04,
+        -51.05,
+        0
+      ],
+      "volume_cm3": 15.222,
+      "facets": 20436
+    }
+  ],
+  "facets": 20436,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 10454,
+    "vertices": 10222,
+    "warnings": []
+  },
+  "expected": null
+}

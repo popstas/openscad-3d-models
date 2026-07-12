@@ -1,0 +1,46 @@
+{
+  "model": "caps-holder.scad",
+  "dims": [
+    45,
+    180.1,
+    80
+  ],
+  "bbox": {
+    "min": [
+      0,
+      -0.1,
+      0
+    ],
+    "max": [
+      45,
+      180,
+      80
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        45,
+        180.1,
+        80
+      ],
+      "offset": [
+        0,
+        -0.1,
+        0
+      ],
+      "volume_cm3": 13.58,
+      "facets": 1380
+    }
+  ],
+  "facets": 1380,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 317,
+    "vertices": 640,
+    "warnings": []
+  },
+  "expected": null
+}

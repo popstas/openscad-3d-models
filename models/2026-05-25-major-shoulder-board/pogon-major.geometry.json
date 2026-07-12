@@ -1,0 +1,62 @@
+{
+  "model": "pogon-major.scad",
+  "dims": [
+    45,
+    80,
+    2.37
+  ],
+  "bbox": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      45,
+      80,
+      2.37
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        45,
+        80,
+        2
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "volume_cm3": 6.763,
+      "facets": 128
+    },
+    {
+      "dims": [
+        45,
+        80,
+        0.35
+      ],
+      "offset": [
+        0,
+        0,
+        2.02
+      ],
+      "volume_cm3": 0.31,
+      "facets": 304
+    }
+  ],
+  "facets": 432,
+  "cgal": {
+    "manifold": true,
+    "volumes": 3,
+    "facets": 109,
+    "vertices": 214,
+    "warnings": [
+      "ERROR: The given mesh is not closed! Unable to convert to CGAL_Nef_Polyhedron."
+    ]
+  },
+  "expected": null
+}

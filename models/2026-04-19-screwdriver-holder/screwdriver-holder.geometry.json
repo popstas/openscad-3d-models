@@ -1,0 +1,46 @@
+{
+  "model": "screwdriver-holder.scad",
+  "dims": [
+    43.3,
+    34,
+    34
+  ],
+  "bbox": {
+    "min": [
+      0.7,
+      -8,
+      1
+    ],
+    "max": [
+      44,
+      26,
+      35
+    ]
+  },
+  "minZ": 1,
+  "parts": [
+    {
+      "dims": [
+        43.3,
+        34,
+        34
+      ],
+      "offset": [
+        0.7,
+        -8,
+        1
+      ],
+      "volume_cm3": 5.566,
+      "facets": 760
+    }
+  ],
+  "facets": 760,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 196,
+    "vertices": 380,
+    "warnings": []
+  },
+  "expected": null
+}

@@ -1,0 +1,46 @@
+{
+  "model": "neiry-fixer.scad",
+  "dims": [
+    27,
+    4,
+    10
+  ],
+  "bbox": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      27,
+      4,
+      10
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        27,
+        4,
+        10
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "volume_cm3": 0.579,
+      "facets": 44
+    }
+  ],
+  "facets": 44,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 14,
+    "vertices": 24,
+    "warnings": []
+  },
+  "expected": null
+}

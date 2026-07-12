@@ -1,0 +1,46 @@
+{
+  "model": "nux-cover.scad",
+  "dims": [
+    143,
+    55,
+    1.2
+  ],
+  "bbox": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      143,
+      55,
+      1.2
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        143,
+        55,
+        1.2
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "volume_cm3": 9.353,
+      "facets": 564
+    }
+  ],
+  "facets": 564,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 142,
+    "vertices": 280,
+    "warnings": []
+  },
+  "expected": null
+}

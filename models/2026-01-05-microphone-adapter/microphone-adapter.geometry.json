@@ -1,0 +1,46 @@
+{
+  "model": "microphone-adapter.scad",
+  "dims": [
+    43,
+    43,
+    44
+  ],
+  "bbox": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      43,
+      43,
+      44
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        43,
+        43,
+        44
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "volume_cm3": 29.346,
+      "facets": 2336
+    }
+  ],
+  "facets": 2336,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 811,
+    "vertices": 1168,
+    "warnings": []
+  },
+  "expected": null
+}

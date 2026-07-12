@@ -1,0 +1,60 @@
+{
+  "model": "case-in-case.scad",
+  "dims": [
+    109.88,
+    137.68,
+    46.58
+  ],
+  "bbox": {
+    "min": [
+      0.01,
+      0.01,
+      0.01
+    ],
+    "max": [
+      109.89,
+      137.69,
+      46.59
+    ]
+  },
+  "minZ": 0.01,
+  "parts": [
+    {
+      "dims": [
+        48.18,
+        134.18,
+        46.58
+      ],
+      "offset": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "volume_cm3": 35.363,
+      "facets": 1612
+    },
+    {
+      "dims": [
+        51.68,
+        137.68,
+        9.58
+      ],
+      "offset": [
+        58.21,
+        0.01,
+        0.01
+      ],
+      "volume_cm3": 14.115,
+      "facets": 1548
+    }
+  ],
+  "facets": 3160,
+  "cgal": {
+    "manifold": true,
+    "volumes": 3,
+    "facets": 2460,
+    "vertices": 1584,
+    "warnings": []
+  },
+  "expected": null
+}

@@ -1,0 +1,46 @@
+{
+  "model": "round-box.scad",
+  "dims": [
+    253.8,
+    253.8,
+    11.2
+  ],
+  "bbox": {
+    "min": [
+      144.5,
+      -126.9,
+      0
+    ],
+    "max": [
+      398.3,
+      126.9,
+      11.2
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        253.8,
+        253.8,
+        11.2
+      ],
+      "offset": [
+        144.5,
+        -126.9,
+        0
+      ],
+      "volume_cm3": 67.07,
+      "facets": 92
+    }
+  ],
+  "facets": 92,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 27,
+    "vertices": 48,
+    "warnings": []
+  },
+  "expected": null
+}

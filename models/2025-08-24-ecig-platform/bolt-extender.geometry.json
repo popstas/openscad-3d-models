@@ -1,0 +1,46 @@
+{
+  "model": "bolt-extender.scad",
+  "dims": [
+    33,
+    32.82,
+    20
+  ],
+  "bbox": {
+    "min": [
+      -16.5,
+      -16.41,
+      0
+    ],
+    "max": [
+      16.5,
+      16.41,
+      20
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        33,
+        32.82,
+        20
+      ],
+      "offset": [
+        -16.5,
+        -16.41,
+        0
+      ],
+      "volume_cm3": 9.981,
+      "facets": 228
+    }
+  ],
+  "facets": 228,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 95,
+    "vertices": 116,
+    "warnings": []
+  },
+  "expected": null
+}

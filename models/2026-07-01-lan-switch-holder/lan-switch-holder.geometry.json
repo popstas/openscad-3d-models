@@ -1,0 +1,46 @@
+{
+  "model": "lan-switch-holder.scad",
+  "dims": [
+    96,
+    30,
+    26
+  ],
+  "bbox": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      96,
+      30,
+      26
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        96,
+        30,
+        26
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "volume_cm3": 13.242,
+      "facets": 954
+    }
+  ],
+  "facets": 954,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 270,
+    "vertices": 477,
+    "warnings": []
+  },
+  "expected": null
+}

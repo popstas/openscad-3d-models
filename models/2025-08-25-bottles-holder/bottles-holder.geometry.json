@@ -1,0 +1,40 @@
+{
+  "model": "bottles-holder.scad",
+  "dims": [
+    131,
+    124.5,
+    8
+  ],
+  "bbox": {
+    "min": [
+      1,
+      0,
+      0
+    ],
+    "max": [
+      132,
+      124.5,
+      8
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        131,
+        124.5,
+        8
+      ],
+      "offset": [
+        1,
+        0,
+        0
+      ],
+      "volume_cm3": 65.511,
+      "facets": 348
+    }
+  ],
+  "facets": 348,
+  "cgal": null,
+  "expected": null
+}

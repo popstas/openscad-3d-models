@@ -1,0 +1,54 @@
+{
+  "model": "mic-box.scad",
+  "dims": [
+    106.2,
+    90.2,
+    33
+  ],
+  "bbox": {
+    "min": [
+      0,
+      0,
+      0
+    ],
+    "max": [
+      106.2,
+      90.2,
+      33
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        104,
+        39,
+        33
+      ],
+      "offset": [
+        0,
+        0,
+        0
+      ],
+      "volume_cm3": 24.877,
+      "facets": 476
+    },
+    {
+      "dims": [
+        106.2,
+        41.2,
+        7
+      ],
+      "offset": [
+        0,
+        49,
+        0
+      ],
+      "volume_cm3": 10.092,
+      "facets": 508
+    }
+  ],
+  "facets": 984,
+  "cgal": null,
+  "expected": null
+}

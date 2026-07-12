@@ -1,0 +1,49 @@
+{
+  "model": "pad-lifter.scad",
+  "dims": [
+    10.14,
+    7.9,
+    1.8
+  ],
+  "bbox": {
+    "min": [
+      -0.79,
+      -0.1,
+      0
+    ],
+    "max": [
+      9.36,
+      7.8,
+      1.8
+    ]
+  },
+  "minZ": 0,
+  "parts": [
+    {
+      "dims": [
+        10.14,
+        7.9,
+        1.8
+      ],
+      "offset": [
+        -0.79,
+        -0.1,
+        0
+      ],
+      "volume_cm3": 0.034,
+      "facets": 504
+    }
+  ],
+  "facets": 504,
+  "cgal": {
+    "manifold": false,
+    "volumes": 4,
+    "facets": 137,
+    "vertices": 254,
+    "warnings": [
+      "WARNING: Object may not be a valid 2-manifold and may need repair!",
+      "EXPORT-WARNING: Exported object may not be a valid 2-manifold and may need repair"
+    ]
+  },
+  "expected": null
+}

@@ -1,0 +1,60 @@
+{
+  "model": "handlebar-stub.scad",
+  "dims": [
+    23,
+    23,
+    16.7
+  ],
+  "bbox": {
+    "min": [
+      -11.5,
+      -11.5,
+      2.7
+    ],
+    "max": [
+      11.5,
+      11.5,
+      19.4
+    ]
+  },
+  "minZ": 2.7,
+  "parts": [
+    {
+      "dims": [
+        23,
+        23,
+        14
+      ],
+      "offset": [
+        -11.5,
+        -11.5,
+        2.7
+      ],
+      "volume_cm3": 2.068,
+      "facets": 856
+    },
+    {
+      "dims": [
+        22.99,
+        22.99,
+        2.7
+      ],
+      "offset": [
+        -11.49,
+        -11.49,
+        16.7
+      ],
+      "volume_cm3": 0.57,
+      "facets": 5388
+    }
+  ],
+  "facets": 6244,
+  "cgal": {
+    "manifold": true,
+    "volumes": 3,
+    "facets": 4930,
+    "vertices": 3126,
+    "warnings": []
+  },
+  "expected": null
+}

@@ -1,0 +1,46 @@
+{
+  "model": "tea-box.scad",
+  "dims": [
+    68.78,
+    68.18,
+    46.58
+  ],
+  "bbox": {
+    "min": [
+      0.01,
+      0.01,
+      0.01
+    ],
+    "max": [
+      68.79,
+      68.19,
+      46.59
+    ]
+  },
+  "minZ": 0.01,
+  "parts": [
+    {
+      "dims": [
+        68.78,
+        68.18,
+        46.58
+      ],
+      "offset": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "volume_cm3": 30.483,
+      "facets": 1772
+    }
+  ],
+  "facets": 1772,
+  "cgal": {
+    "manifold": true,
+    "volumes": 2,
+    "facets": 1278,
+    "vertices": 888,
+    "warnings": []
+  },
+  "expected": null
+}
