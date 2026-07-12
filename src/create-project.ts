@@ -8,7 +8,7 @@ function usage(): never {
   process.exit(1);
 }
 
-function todayStamp(): string {
+export function todayStamp(): string {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -16,7 +16,7 @@ function todayStamp(): string {
   return `${y}-${m}-${d}`;
 }
 
-function sanitizeSlug(s: string): string {
+export function sanitizeSlug(s: string): string {
   return s
     .trim()
     .toLowerCase()
@@ -107,6 +107,6 @@ function main() {
   for (const p of previews) console.log(`- ${p}`);
 }
 
-main();
+if (require.main === module) main();
 
 
