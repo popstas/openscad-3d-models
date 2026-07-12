@@ -92,8 +92,8 @@ module orient(){
 // ----------------------------
 // ВЫВОД МОДЕЛИ
 // ----------------------------
-module render(){
+module main(){
     clip_for_fragments(){ orient(){ all_details(); } }
 }
 
-render();
+main();
