@@ -72,7 +72,8 @@ module base(){
         r=radius_r,
         kr=mink_r,
         wall_th=wall_xy,
-        h_th=wall_z
+        h_th=wall_z,
+        pocket_r=0 // sharp-cornered pocket, as printed (pre-v1.3 modules.scad default)
     );
 }
 

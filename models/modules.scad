@@ -1,7 +1,15 @@
 // =============================================
 // Base reusable functions and modules for models
-// Version: 1.2
+// Version: 1.3
 // =============================================
+// Changelog 1.3:
+// - fix rounded_prism_with_pocket: pocket_r default (=r) never applied due to
+//   OpenSCAD if-scoping; pocket_r<0 effectively rendered a sharp-cornered pocket.
+//   Pass pocket_r=0 explicitly to keep the old sharp-cornered behavior.
+// - fix rounded_rect_extrude_bottom_chamfer: bottom chamfer wedge was missing
+//   (part started at z=chz); module is deprecated, use chamfer_rr_extrude.
+// - unused modules grouped under DEPRECATED section at end of file.
+// - removed obsolete pre-2013 offset() fallback in outset.
 
 // Short description for models table (library file)
 description = "Reusable base functions and modules for OpenSCAD models";
@@ -11,16 +19,14 @@ description = "Reusable base functions and modules for OpenSCAD models";
 // - It will use model-provided variables when present, but has safe fallbacks.
 //   pin_fs -> fs_pin(pin_fs) default 0.25. Small epsilon uses eps() = 0.1.
 // - All modules are top-scope and documented.
-// - Order: Common 2D ops -> Rounded rectangles -> 3D chamfers/extrusions -> Rings -> Misc.
+// - Order: Common 2D ops -> Rounded rectangles -> 3D chamfers/extrusions -> Rings -> Misc -> Deprecated.
 // - Migration map (old -> new):
 //   rr2d -> rounded_rect
-//   rr2d_centered -> rounded_rect_centered
-//   rounded_rect2d -> rounded_rect_centered
 //   rounded_rect2d_aniso -> rounded_rect_aniso
 //   chamfered_plate_bottom_edges_sym -> plate_with_bottom_chamfer
-//   chamfered_rr_bottom_edges_sym -> rounded_rect_extrude_bottom_chamfer
+//   chamfered_rr_bottom_edges_sym, rounded_rect_extrude_bottom_chamfer -> chamfer_rr_extrude
 //   round_chamfer_ring -> chamfer_ring
-//   rr2d_round_minY/minX, L2D -> removed (recreate locally if needed)
+//   rr2d_centered, rounded_rect2d, rr2d_round_minY/minX, L2D -> removed (recreate locally if needed)
 
 // -------------------------------------------------
 // Fragment defaults (effective only when this file is included, not used)
@@ -38,41 +44,15 @@ frag_h_extra  = 20;      // запас по высоте клипа, мм
 // NOTE: These operate on 2D children(). Use inside a 2D context or before linear_extrude.
 
 // outset(d=1) — creates an offset polygon outward by distance d around a 2D shape
-// Uses offset() when available; for very old versions, falls back to minkowski.
 module outset(d=1){
     if (d == 0) children();
-    else if (version_num() < 20130424) {
-        // Fallback for very old OpenSCAD versions w/o robust offset()
-        render() minkowski(){ circle(r=d); children(0); }
-    } else {
-        offset(delta=d) children(0);
-    }
-}
-
-// outset_extruded(d=1) — helper used by some legacy workarounds
-module outset_extruded(d=1){
-    projection(cut=true) minkowski(){
-        cylinder(r=d);
-        linear_extrude(center=true) children(0);
-    }
+    else offset(delta=d) children(0);
 }
 
 // inset(d=1) — creates an offset polygon inward by distance d inside a 2D shape
 module inset(d=1){
     if (d == 0) children();
     else offset(delta=-d) children(0);
-}
-
-// fillet(r=1) — adds fillets of radius r to all concave corners of a 2D shape
-// Implementation: inset(r) then outset(r)
-module fillet(r=1){
-    inset(d=r) outset(d=r) children(0);
-}
-
-// rounding(r=1) — rounds all convex corners of a 2D shape
-// Implementation: outset(r) then inset(r)
-module rounding(r=1){
-    outset(d=r) inset(d=r) children(0);
 }
 
 // shell(d, center=false) — makes a ring shell of width d along the edge of a 2D shape
@@ -120,27 +100,6 @@ module rounded_rect_aniso(w, h, rx, ry){
     }
 }
 
-// rounded_rect_extrude_bottom_chamfer(size=[x,y], r, h, chz, chx, chy)
-// Extruded rounded rectangle with bottom-only chamfer (anisotropic by chx/chy)
-module rounded_rect_extrude_bottom_chamfer(size=[10,10], r=2, h=5, chz=0.8, chx=0.8, chy=0.8){
-    sx = size[0]; sy = size[1];
-    chz2 = clamp_chz(h, chz);
-    chxy = clamp_chxy(sx, sy, chx, chy);
-    chx2 = chxy[0];
-    chy2 = chxy[1];
-    if (chz2 <= 0 || (chx2 <= 0 && chy2 <= 0)){
-        linear_extrude(height=h) rounded_rect([sx, sy], r);
-    } else {
-        union(){
-            translate([0,0,chz2])
-                linear_extrude(height=h - chz2)
-                    rounded_rect([sx, sy], r);
-            // bottom chamfer as scaled extrude from center
-            r2 = max(r - min(chx2, chy2), eps());
-        }
-    }
-}
-
 // -------------------------------------------------
 // 3D: Rect shells, trays, rings and chamfers
 // -------------------------------------------------
@@ -163,45 +122,23 @@ module rounded_prism(size=[10,10], h=1, r=0, kr=0){
     }
 }
 
+// rounded_prism_with_pocket — rounded_prism minus an inner pocket.
+// pocket_r<0 (default) uses the outer radius r; pocket_r=0 gives a sharp-cornered pocket.
 module rounded_prism_with_pocket(size=[10,10], h=1, r=0, kr=0, wall_th=1, h_th=1, pocket_r=-1){
     walls_th = wall_th * 2;
-    if (pocket_r < 0) {
-        pocket_r = r;
-    }
+    pr = (pocket_r < 0) ? r : pocket_r;
     difference(){
         rounded_prism(size=size, h=h, r=r, kr=kr);
         translate([wall_th, wall_th, h_th])
             rounded_prism(
                 size=[size[0] - walls_th, size[1] - walls_th],
                 h=h - h_th + eps(),
-                r=pocket_r,
+                r=pr,
                 kr=0
             );
     }
 }
-    
 
-
-module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7, mink_r=0){
-    if (mink_r > 0){
-        // Preserve outer size/height by pre-insetting and post-minkowski with a sphere
-        sx = size[0]; sy = size[1];
-        m = mink_r;
-        sx2 = max(sx - 2*m, eps());
-        sy2 = max(sy - 2*m, eps());
-        r2 = max(r - m, 0);
-        h2 = max(h - 2*m, eps());
-        // Shift so final bbox matches [0..sx, 0..sy, 0..h]
-        translate([m, m, m])
-            minkowski(){
-              linear_extrude(height=h2, scale=s, slices=30)
-                rounded_rect([sx2, sy2], r2);
-              sphere(r=m, $fs=fs_pin(), $fa=6);
-            }
-    } else {
-        linear_extrude(height=h, scale=s, slices=30) rounded_rect(size, r);
-    }
-}
 
 module chamfer_rr_extrude(size=[10,10], h=5, r=2, ch=1) {
   sx = size[0]; sy = size[1];
@@ -237,25 +174,6 @@ module chamfer_rr_extrude(size=[10,10], h=5, r=2, ch=1) {
   }
 }
 
-// rr_shell(size=[x,y], r, h, wall) — rectangular rounded shell of thickness wall
-module rr_shell(size=[20,20], r=2, h=10, wall=2){
-    difference(){
-        rr_extrude(size=size, r=r, h=h);
-        translate([0,0,-eps()])
-            rr_extrude(size=[max(size[0]-2*wall, eps()), max(size[1]-2*wall, eps())], r=max(r-wall,0), h=h+2*eps());
-    }
-}
-
-// rr_tray(outer=[x,y], outer_r, outer_h, inner=[x,y], inner_r, bottom_th)
-// Makes a rectangular rounded tray: outer body minus inner cavity that starts at bottom_th
-module rr_tray(outer=[40,30], outer_r=3, outer_h=20, inner=[36,26], inner_r=2, bottom_th=2){
-    difference(){
-        rr_extrude(size=outer, r=outer_r, h=outer_h);
-        translate([0,0,bottom_th - eps()])
-            rr_extrude(size=inner, r=inner_r, h=max(outer_h - bottom_th + 2*eps(), eps()));
-    }
-}
-
 // chamfer_ring(d_outer, d_inner, h, chamfer)
 // Cylindrical ring of height h with a top outward chamfer of size chamfer.
 module chamfer_ring(d_outer, d_inner, h, chamfer){
@@ -275,20 +193,6 @@ module chamfer_ring(d_outer, d_inner, h, chamfer){
 // -------------------------------------------------
 // 3D: Misc utilities
 // -------------------------------------------------
-// cyl_bar_y(xc, zc, r, h) — cylinder bar along Y axis centered at (xc, zc)
-// Useful for long slots/fillets made by subtracting cylinders.
-module cyl_bar_y(xc, zc, r, h){
-    translate([xc, 0, zc]) rotate([-90,0,0])
-        cylinder(h=h, r=r, $fs=fs_pin(), $fa=6);
-}
-
-// chamfer_wedge_y(ch, len_y) — triangular wedge extruded along Y for bottom chamfers
-// Creates a right triangle [0,0]-[ch,0]-[0,ch] and extrudes it along Y.
-module chamfer_wedge_y(ch, len_y){
-    linear_extrude(height=len_y)
-        polygon(points=[[0,0],[ch,0],[0,ch]]);
-}
-
 // fragment clipper by bounding box at origin
 // clip_for_fragments_bbox(L, W, H, enabled=false, frag_size=20, frag_index=0, frag_h_extra=20)
 // Intersects children() with a corner cube of size frag_size at one of 4 corners of the LxW footprint, extended by H along Z.
@@ -354,4 +258,109 @@ module upside_down(h){
     translate([0, 0, h])
         mirror([0, 0, 1])
             children();
+}
+
+// -------------------------------------------------
+// DEPRECATED (unused by models, candidates for removal in v2.0)
+// -------------------------------------------------
+
+// DEPRECATED: use chamfer_rr_extrude (isotropic chamfer) instead.
+// rounded_rect_extrude_bottom_chamfer(size=[x,y], r, h, chz, chx, chy)
+// Extruded rounded rectangle with bottom-only chamfer (anisotropic by chx/chy).
+// Note: before v1.3 the bottom chamfer wedge was missing entirely — the part
+// started at z=chz. Fixed implementation below (same technique as chamfer_rr_extrude).
+module rounded_rect_extrude_bottom_chamfer(size=[10,10], r=2, h=5, chz=0.8, chx=0.8, chy=0.8){
+    sx = size[0]; sy = size[1];
+    chz2 = clamp_chz(h, chz);
+    chxy = clamp_chxy(sx, sy, chx, chy);
+    chx2 = chxy[0];
+    chy2 = chxy[1];
+    if (chz2 <= 0 || (chx2 <= 0 && chy2 <= 0)){
+        linear_extrude(height=h) rounded_rect([sx, sy], r);
+    } else {
+        sx_bot = max(sx - 2*chx2, eps());
+        sy_bot = max(sy - 2*chy2, eps());
+        r_bot = max(r - min(chx2, chy2), 0);
+        union(){
+            translate([0,0,chz2])
+                linear_extrude(height=h - chz2)
+                    rounded_rect([sx, sy], r);
+            // bottom chamfer wedge: centered scale from reduced base up to full top
+            translate([sx/2, sy/2, 0])
+                linear_extrude(height=chz2, scale=[sx/sx_bot, sy/sy_bot])
+                    translate([-sx_bot/2, -sy_bot/2])
+                        rounded_rect([sx_bot, sy_bot], r_bot);
+        }
+    }
+}
+
+// DEPRECATED: fillet(r=1) — adds fillets of radius r to all concave corners of a 2D shape
+module fillet(r=1){
+    inset(d=r) outset(d=r) children(0);
+}
+
+// DEPRECATED: rounding(r=1) — rounds all convex corners of a 2D shape
+module rounding(r=1){
+    outset(d=r) inset(d=r) children(0);
+}
+
+// DEPRECATED: outset_extruded(d=1) — legacy workaround helper
+module outset_extruded(d=1){
+    projection(cut=true) minkowski(){
+        cylinder(r=d);
+        linear_extrude(center=true) children(0);
+    }
+}
+
+// DEPRECATED: rounded_rr_extrude — tapered extrude with optional minkowski rounding
+module rounded_rr_extrude(size=[10,10], r=2, h=5, s=0.7, mink_r=0){
+    if (mink_r > 0){
+        // Preserve outer size/height by pre-insetting and post-minkowski with a sphere
+        sx = size[0]; sy = size[1];
+        m = mink_r;
+        sx2 = max(sx - 2*m, eps());
+        sy2 = max(sy - 2*m, eps());
+        r2 = max(r - m, 0);
+        h2 = max(h - 2*m, eps());
+        // Shift so final bbox matches [0..sx, 0..sy, 0..h]
+        translate([m, m, m])
+            minkowski(){
+              linear_extrude(height=h2, scale=s, slices=30)
+                rounded_rect([sx2, sy2], r2);
+              sphere(r=m, $fs=fs_pin(), $fa=6);
+            }
+    } else {
+        linear_extrude(height=h, scale=s, slices=30) rounded_rect(size, r);
+    }
+}
+
+// DEPRECATED: rr_shell(size=[x,y], r, h, wall) — rectangular rounded shell of thickness wall
+module rr_shell(size=[20,20], r=2, h=10, wall=2){
+    difference(){
+        rr_extrude(size=size, r=r, h=h);
+        translate([0,0,-eps()])
+            rr_extrude(size=[max(size[0]-2*wall, eps()), max(size[1]-2*wall, eps())], r=max(r-wall,0), h=h+2*eps());
+    }
+}
+
+// DEPRECATED: rr_tray(outer=[x,y], outer_r, outer_h, inner=[x,y], inner_r, bottom_th)
+// Makes a rectangular rounded tray: outer body minus inner cavity that starts at bottom_th
+module rr_tray(outer=[40,30], outer_r=3, outer_h=20, inner=[36,26], inner_r=2, bottom_th=2){
+    difference(){
+        rr_extrude(size=outer, r=outer_r, h=outer_h);
+        translate([0,0,bottom_th - eps()])
+            rr_extrude(size=inner, r=inner_r, h=max(outer_h - bottom_th + 2*eps(), eps()));
+    }
+}
+
+// DEPRECATED: cyl_bar_y(xc, zc, r, h) — cylinder bar along Y axis centered at (xc, zc)
+module cyl_bar_y(xc, zc, r, h){
+    translate([xc, 0, zc]) rotate([-90,0,0])
+        cylinder(h=h, r=r, $fs=fs_pin(), $fa=6);
+}
+
+// DEPRECATED: chamfer_wedge_y(ch, len_y) — triangular wedge extruded along Y for bottom chamfers
+module chamfer_wedge_y(ch, len_y){
+    linear_extrude(height=len_y)
+        polygon(points=[[0,0],[ch,0],[0,ch]]);
 }

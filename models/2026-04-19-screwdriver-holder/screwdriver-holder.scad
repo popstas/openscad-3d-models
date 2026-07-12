@@ -123,15 +123,16 @@ holder_hole_uv = [
 
 // ===== Модули фрагментов детали ====================
 module shell_wall() {
+  // Стенка начинается на z=edge_chamfer_z: нижняя фаска у старого
+  // rounded_rect_extrude_bottom_chamfer не генерировалась (баг modules.scad <1.3),
+  // деталь напечатана именно так — геометрия закреплена явно.
   difference() {
-    rounded_rect_extrude_bottom_chamfer(
-      size = [outer_flat_x, outer_flat_y],
-      r = outer_corner_r,
-      h = shell_h,
-      chz = edge_chamfer_z,
-      chx = edge_chamfer_x,
-      chy = edge_chamfer_y
-    );
+    translate([0, 0, edge_chamfer_z])
+      rr_extrude(
+        size = [outer_flat_x, outer_flat_y],
+        r = outer_corner_r,
+        h = shell_h - edge_chamfer_z
+      );
     translate([wall_th, wall_th, -tiny])
       rr_extrude(
         size = [inner_flat_x, inner_flat_y],
