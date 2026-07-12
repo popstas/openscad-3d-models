@@ -16,7 +16,7 @@ description: Inspect OpenSCAD preview render images for a model and fix geometry
    - Unexpected intersections, floating parts, inverted axes, or wrong Z placement.
 4. Trace each visual problem back to the responsible variables/modules in the SCAD file.
 5. Fix the SCAD with the smallest geometry-preserving change that addresses the mismatch.
-6. Regenerate or reopen renders after each fix and repeat until the render matches the expected model.
+6. Regenerate renders after each fix with `npm run render -- models/<folder>` (or rely on a running `npm run watch`) and repeat until the render matches the expected model.
 
 ## Notes
 

@@ -13,7 +13,7 @@
 
 Перед созданием новой модели смотри README других моделей, выбери 2-3 модели для изучения, чтобы сделать по аналогии.
 
-Use `npm run create-project long_name short_name` to create new project.
+Use `npm run create-project long_name short_name default "One-line description"` to create new project (4th arg fills `description = "";`, без него модель не попадёт в индекс `models/README.md`).
 
 В начале создай README.md модели, опиши все фрагменты.
 Потом создай scad файл модели.
@@ -22,8 +22,10 @@ Add variable `description = "";` in the top of scad file.
 Write one line short description to var.
 
 ### Команды сборки и разработки
+- **Одноразовый рендер модели**: `npm run render -- models/<папка>` — принудительно собирает STL + 4 превью и обновляет индекс `models/README.md`. Основная команда для проверки модели после правок (параметры камеры берутся из `PNG_VIEWS` в `src/render-core.ts` — не дублировать их вручную)
+- **Рендер всех устаревших моделей**: `npm run render:all` (`npm run render:all -- --force` — пересобрать всё, например после правки `modules.scad`)
+- **Watch-режим**: `npm run watch` — пересборка при каждом сохранении
 - **Предварительный просмотр в GUI**: `openscad 2025-08-24-ecig-platform/ecig-platform.scad`
-- **Экспорт STL**: `openscad -o 2025-08-24-ecig-platform/ecig-platform.stl 2025-08-24-ecig-platform/ecig-platform.scad`
 - **Переопределение параметров**: `openscad -D wall=2.2 -o out.stl path/to/model.scad`
 - **Компиляция (CGAL) в GUI**: F6 для выявления ошибок геометрии перед экспортом
 
@@ -138,7 +140,7 @@ model_height = 20;           // высота модели, мм
 - Переменные (вверху) для всех размеров
 - Комментарии (этот блок)
 - Функции фрагментов детали (ниже)
-- Функция вывода всех фрагментов show_all()
+- Функция вывода всех фрагментов main()
 - Функция обрезки через intersection при test_fragment=true
 
 Детали: base (главная деталь), front, frame и т.п.
@@ -172,7 +174,7 @@ module frame() {
 ### 8. Функция вывода всех фрагментов
 ```scad
 // ===== Вывод всех фрагментов ====================
-module show_all() {
+module main() {
     if (test_fragment) {
         // Режим тест-фрагментов
         intersection() {
@@ -195,8 +197,11 @@ module show_all() {
 ### 9. Точка входа
 ```scad
 // ===== Точка входа ====================
-show_all();
+main();
 ```
+
+В существующих моделях допускается legacy-точка входа `show_all()`; не определяйте
+`module render()` — это затеняет встроенный `render()` OpenSCAD.
 
 ## Рекомендации по проектированию
 

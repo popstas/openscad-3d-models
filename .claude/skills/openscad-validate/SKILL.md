@@ -25,7 +25,9 @@ description: Review an OpenSCAD model for technical completeness and maintainabi
    - Required `$fn`, `$fa`, `$fs`, `pin_fs`, and service parameters.
    - Top-level modules only.
    - Separate modules for separate fragments/details.
-   - `show_all()` or `main()` entry point called at the end.
+   - `main()` entry point called at the end (canonical for new models; legacy
+     `show_all()` or `render()` is acceptable in existing models, but flag
+     `module render()` in new code — it shadows the OpenSCAD builtin).
    - `test_fragment` support when the model uses fragment clipping.
 6. Suggest concrete fixes, including variable names and likely replacement expressions.
 
