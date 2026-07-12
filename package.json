@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "watch": "node --watch --env-file=.env --import tsx src/watch.ts",
+    "render": "node --env-file=.env --import tsx src/render-once.ts",
+    "render:all": "node --env-file=.env --import tsx src/render-once.ts --all",
     "build": "tsc -p .",
     "test": "echo \"No tests\"",
     "create-project": "node --import tsx src/create-project.ts"

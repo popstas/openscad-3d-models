@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 
 function usage(): never {
-  console.error('Usage: npm run create-project <long_name> [short_name] [template]');
-  console.error('Example: npm run create-project ecig-platform ecig-platform default');
+  console.error('Usage: npm run create-project <long_name> [short_name] [template] [description]');
+  console.error('Example: npm run create-project ecig-platform ecig-platform default "Platform for e-cig charging"');
   process.exit(1);
 }
 
@@ -13,7 +13,7 @@ function todayStamp(): string {
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
   const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${d.startsWith('3') && m === '08' ? m : m}-${d}`; // standard YYYY-MM-DD
+  return `${y}-${m}-${d}`;
 }
 
 function sanitizeSlug(s: string): string {
@@ -43,7 +43,7 @@ function emptyPngPlaceholder(): Buffer {
 }
 
 function main() {
-  const [, , longRaw, shortRaw, templateRaw] = process.argv;
+  const [, , longRaw, shortRaw, templateRaw, descriptionRaw] = process.argv;
   if (!longRaw) usage();
 
   const longSlug = sanitizeSlug(longRaw);
@@ -71,16 +71,26 @@ function main() {
   const scadPath = path.join(modelDir, scadName);
   const readmePath = path.join(modelDir, readmeName);
 
-  // Read SCAD template from models/templates/<template>.scad and substitute placeholders
-  const templatePath = path.join(root, 'models', `template-${templateName}`, `${templateName}.scad`);
+  // Read SCAD template from models/template-<template>/<template>.scad and substitute placeholders
+  const templateDir = path.join(root, 'models', `template-${templateName}`);
+  const templatePath = path.join(templateDir, `${templateName}.scad`);
   let scadContent = fs.readFileSync(templatePath, 'utf8');
   const longName = longSlug.replace(/-/g, ' ');
-  const shortDescription = '';
+  // Empty description hides the model from the generated models/README.md index,
+  // so fall back to the human-readable long name.
+  const shortDescription = (descriptionRaw || '').trim() || longName;
   scadContent = scadContent
     .replace(/\$\{longName\}/g, longName)
     .replace(/\$\{shortDescription\}/g, shortDescription);
 
-  const readmeTemplate = `# ${longSlug.replace(/-/g, ' ')}\n\n- Файл модели: \`${shortSlug}.scad\`\n- Версия: 1.0\n\n## Ключевые параметры (см. начало SCAD)\n- $fn, $fa, $fs, pin_fs — точность окружностей\n- test_fragment, frag_* — тест‑фрагменты\n- edge_chamfer_*, tiny — фаски/совм.\n\n## Превью\n\n![${shortSlug} iso](preview.iso.png)\n\n![${shortSlug} xy](preview.xy.png)\n\n![${shortSlug} xz](preview.xz.png)\n\n![${shortSlug} yz](preview.yz.png)\n`;
+  // README from template folder (falls back to template-default's copy)
+  const readmeTemplatePath = fs.existsSync(path.join(templateDir, 'README.template.md'))
+    ? path.join(templateDir, 'README.template.md')
+    : path.join(root, 'models', 'template-default', 'README.template.md');
+  const readmeTemplate = fs.readFileSync(readmeTemplatePath, 'utf8')
+    .replace(/\$\{longName\}/g, longName)
+    .replace(/\$\{shortName\}/g, shortSlug)
+    .replace(/\$\{description\}/g, shortDescription);
 
   writeIfMissing(scadPath, scadContent);
   writeIfMissing(readmePath, readmeTemplate);
