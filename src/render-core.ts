@@ -7,7 +7,7 @@ import path from 'path';
 import { PNG } from 'pngjs';
 import Bluebird from 'bluebird';
 import { drawText, fillRect, textSize, encodePngDeterministic } from './png-utils';
-import { analyzeTriangles, parseStlFile, StlAnalysis, Vec3 } from './stl-analysis';
+import { analyzeTriangles, parseStlFile, StlAnalysis, Triangle, Vec3 } from './stl-analysis';
 import { renderSlicePng, SliceAxis } from './stl-slice';
 
 export const ROOT = process.cwd();
@@ -305,13 +305,19 @@ export function cutPngPath(scad: string, axis: SliceAxis): string {
   return path.join(path.dirname(scad), `${path.basename(scad, '.scad')}.cut-${axis}.png`);
 }
 
-// Writes <model>.geometry.json and the three cross-section PNGs from the STL.
+// Parsed STL data shared between geometry.json and slice rendering.
+export type GeometryData = { tris: Triangle[]; analysis: StlAnalysis };
+
+// Writes <model>.geometry.json from the STL and logs NOTE/EXPECT lines.
+// Fast (pure Node, no images): numbers land right after the STL so slice and
+// preview PNGs can render afterwards in parallel. Returns parsed data for
+// renderCutSlices, or null when the STL is missing/unreadable.
 // When cgal stats are not available (STL not re-rendered), the previous cgal
 // section is preserved.
-export function writeGeometryArtifacts(scad: string, cgal: CgalStats | null): void {
+export function writeGeometryJson(scad: string, cgal: CgalStats | null): GeometryData | null {
   const stl = toStl(scad);
   const tris = parseStlFile(stl);
-  if (!tris) return;
+  if (!tris) return null;
   const analysis = analyzeTriangles(tris);
   const jsonPath = geometryJsonPath(scad);
 
@@ -336,14 +342,6 @@ export function writeGeometryArtifacts(scad: string, cgal: CgalStats | null): vo
   };
   fs.writeFileSync(jsonPath, JSON.stringify(doc, null, 2) + '\n', 'utf8');
 
-  for (const axis of SLICE_AXES) {
-    try {
-      renderSlicePng(tris, analysis.bbox.min, analysis.bbox.max, axis, cutPngPath(scad, axis));
-    } catch (e) {
-      console.warn(`slice ${axis} failed for ${path.relative(ROOT, scad)}:`, (e as Error).message);
-    }
-  }
-
   const rel = path.relative(ROOT, scad);
   if (Math.abs(analysis.minZ) > 0.05) {
     console.log(`NOTE: ${rel}: model bottom at z=${analysis.minZ} (not on the build plate)`);
@@ -355,18 +353,40 @@ export function writeGeometryArtifacts(scad: string, cgal: CgalStats | null): vo
       console.log(`EXPECT MISMATCH: ${rel}: ${expectedResult.mismatches.join('; ')}`);
     }
   }
+
+  return { tris, analysis };
 }
 
-// Regenerate geometry artifacts when the STL exists but the report/slices are
+// Renders the three <model>.cut-x/y/z.png cross-sections from parsed STL data.
+export function renderCutSlices(scad: string, geo: GeometryData): void {
+  const { tris, analysis } = geo;
+  for (const axis of SLICE_AXES) {
+    try {
+      renderSlicePng(tris, analysis.bbox.min, analysis.bbox.max, axis, cutPngPath(scad, axis));
+    } catch (e) {
+      console.warn(`slice ${axis} failed for ${path.relative(ROOT, scad)}:`, (e as Error).message);
+    }
+  }
+}
+
+// Writes <model>.geometry.json and the three cross-section PNGs from the STL.
+export function writeGeometryArtifacts(scad: string, cgal: CgalStats | null): void {
+  const geo = writeGeometryJson(scad, cgal);
+  if (geo) renderCutSlices(scad, geo);
+}
+
+// Refresh <model>.geometry.json when the STL exists but the report/slices are
 // missing or older than the STL. Cheap (pure Node), no openscad run.
-function refreshGeometryArtifactsIfStale(scad: string): void {
+// Returns parsed data when slices need (re)rendering — caller runs
+// renderCutSlices, so it can overlap with preview PNG rendering.
+function refreshGeometryJsonIfStale(scad: string): GeometryData | null {
   const stl = toStl(scad);
   const stlStat = statSafe(stl);
-  if (!stlStat) return;
+  if (!stlStat) return null;
   const jsonStat = statSafe(geometryJsonPath(scad));
   const stale = !jsonStat || jsonStat.mtimeMs < stlStat.mtimeMs
     || SLICE_AXES.some(a => !statSafe(cutPngPath(scad, a)));
-  if (stale) writeGeometryArtifacts(scad, null);
+  return stale ? writeGeometryJson(scad, null) : null;
 }
 
 let building = new Set<string>();
@@ -385,7 +405,8 @@ export async function buildIfOutdated(scad: string, opts: { force?: boolean } = 
   const needStl = force || !(tStat && tStat.mtimeMs >= sStat.mtimeMs);
   const needPng = force || pStats.some(({ st }) => !(st && st.mtimeMs >= sStat.mtimeMs));
   if (!needStl && !needPng) {
-    refreshGeometryArtifactsIfStale(scad);
+    const geo = refreshGeometryJsonIfStale(scad);
+    if (geo) renderCutSlices(scad, geo);
     return 'skipped';
   }
   if (building.has(scad)) return 'skipped';
@@ -400,17 +421,19 @@ export async function buildIfOutdated(scad: string, opts: { force?: boolean } = 
   process.stdout.write(`Rendering: ${path.relative(ROOT, scad)} -> ${path.relative(ROOT, stl)}\n`);
   try {
     fs.mkdirSync(path.dirname(stl), { recursive: true });
-    // Generate STL first
+    // Stage 1: STL (everything else derives from it)
+    let geo: GeometryData | null = null;
     if (needStl) {
       const output = await renderStl(scad, stl);
       console.log(`Built: ${path.relative(ROOT, stl)}`);
-      writeGeometryArtifacts(scad, parseCgalStats(output));
+      // Stage 2: geometry.json — numbers land before any pictures
+      geo = writeGeometryJson(scad, parseCgalStats(output));
     } else {
-      refreshGeometryArtifactsIfStale(scad);
+      geo = refreshGeometryJsonIfStale(scad);
     }
-    // Then generate PNGs
+    // Stage 3: preview PNGs (openscad subprocesses) and cut slices in parallel
+    const pngTasks: Promise<void>[] = [];
     if (needPng) {
-      const pngTasks = [];
       for (const { v, path: png } of pngs) {
         const st = statSafe(png);
         if (!force && st && st.mtimeMs >= sStat.mtimeMs) continue;
@@ -418,8 +441,10 @@ export async function buildIfOutdated(scad: string, opts: { force?: boolean } = 
         console.log(`Rendering PNG (${v.name}): ${path.relative(ROOT, png)}`);
         pngTasks.push(renderPngWithNormalize(scad, png, v));
       }
-      await Bluebird.all(pngTasks);
     }
+    // Slices run on the Node thread while the openscad processes work
+    if (geo) renderCutSlices(scad, geo);
+    await Bluebird.all(pngTasks);
     return 'built';
   } catch (e) {
     console.error(`Error rendering ${scad}:`, (e as Error).message);
