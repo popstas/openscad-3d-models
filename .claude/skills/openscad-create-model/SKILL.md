@@ -33,6 +33,14 @@ npm run create-project long-name short-name default "One-line model description"
      `show_all()`; never define `module render()` in new code — it shadows the OpenSCAD
      builtin `render()`.
    - Support `test_fragment` clipping through `intersection()` when appropriate.
+   - Declare the expected geometry as top-level literals so every render verifies it
+     automatically (EXPECT OK / EXPECT MISMATCH in the render output):
+     ```scad
+     expected_dims = [116, 106.4, 30]; // overall bbox of the whole layout, mm
+     expected_parts = 2;               // number of separate printed parts
+     ```
+   - Use `assert()` for invariants that must hold (e.g. inner size > 0) — the render
+     fails loudly instead of producing silently wrong geometry.
 
 ## Reusable modules (models/modules.scad)
 
@@ -62,9 +70,18 @@ of truth for cameras/sizes is `PNG_VIEWS` in `src/render-core.ts`):
 npm run render -- models/<folder>
 ```
 
-The STL export log must report `Simple: yes` (manifold check). Read the rendered PNGs and
-confirm the geometry matches the README before declaring done. The command also regenerates
-the global `models/README.md` index — that index is auto-generated, so don't hand-edit it.
+Then verify numbers first, pixels second:
+
+1. Render output must show `EXPECT OK` (fix `EXPECT MISMATCH` before anything else) and
+   no `NOTE: model bottom at z=...` (parts must sit on the build plate).
+2. Read `<model>.geometry.json`: `minZ` ~0, `parts` count and per-part `dims` match the
+   README, `cgal.manifold` is true, `cgal.warnings` is empty.
+3. Read the rendered PNGs — exterior views plus `<model>.cut-x/y/z.png` cross-sections
+   (10 mm grid) to confirm wall thickness and pockets — and confirm the geometry matches
+   the README before declaring done.
+
+The command also regenerates the global `models/README.md` index — that index is
+auto-generated, so don't hand-edit it.
 
 `npm run watch` is the continuous alternative: it rebuilds on every save and keeps the
 index fresh. Use `npm run render:all` to rebuild every outdated model once

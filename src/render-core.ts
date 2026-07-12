@@ -4,9 +4,11 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import zlib from 'zlib';
 import { PNG } from 'pngjs';
 import Bluebird from 'bluebird';
+import { drawText, fillRect, textSize, encodePngDeterministic } from './png-utils';
+import { analyzeTriangles, parseStlFile, StlAnalysis, Vec3 } from './stl-analysis';
+import { renderSlicePng, SliceAxis } from './stl-slice';
 
 export const ROOT = process.cwd();
 export const OPENSCAD_CMD = process.env.OPENSCAD_CMD || process.env.openscad_path || 'openscad';
@@ -55,12 +57,18 @@ export function listScadFiles(dir: string): string[] {
   return out;
 }
 
-export function renderStl(scad: string, stl: string): Promise<void> {
+// Renders the STL and returns the captured openscad output (CGAL stats and
+// warnings land on stderr) while still echoing it to the console.
+export function renderStl(scad: string, stl: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const args = ['-o', stl, scad];
-    const child = spawn(OPENSCAD_CMD, args, { stdio: 'inherit' });
+    const child = spawn(OPENSCAD_CMD, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let out = '';
+    const onData = (d: Buffer) => { const s = d.toString(); out += s; process.stdout.write(s); };
+    child.stdout.on('data', onData);
+    child.stderr.on('data', onData);
     child.on('exit', (code) => {
-      if (code === 0) resolve(); else reject(new Error(`openscad exit ${code}`));
+      if (code === 0) resolve(out); else reject(new Error(`openscad exit ${code}`));
     });
     child.on('error', reject);
   });
@@ -113,13 +121,7 @@ export function normalizePng(pngPath: string): void {
       filterType: 0,
     });
     img.data.copy(out.data);
-    const outBuf = PNG.sync.write(out, {
-      filterType: 0,
-      colorType,
-      bitDepth,
-      deflateLevel: 9,
-      deflateStrategy: zlib.constants.Z_FIXED,
-    });
+    const outBuf = encodePngDeterministic(out);
     if (!outBuf.equals(buf)) fs.writeFileSync(pngPath, outBuf);
   } catch {
     // ignore malformed images
@@ -127,9 +129,9 @@ export function normalizePng(pngPath: string): void {
 }
 
 // ======== STL dimensions (bounding box) ========
-type Vec3 = { x: number; y: number; z: number };
+type Dims3 = { x: number; y: number; z: number };
 
-export function computeStlDimensions(stlPath: string): Vec3 | null {
+export function computeStlDimensions(stlPath: string): Dims3 | null {
   let txt: string;
   try {
     // Read as UTF-8; OpenSCAD typically exports ASCII STL
@@ -157,183 +159,6 @@ export function computeStlDimensions(stlPath: string): Vec3 | null {
 }
 
 function fmtMm(v: number): string { return v.toFixed(2) + 'mm'; }
-
-// ======== PNG overlay text (tiny 3x5 bitmap font) ========
-const FONT_W = 3;
-const FONT_H = 5;
-// Each glyph is an array of 5 strings of length 3, using '#' for on, '.' for off.
-const FONT: Record<string, string[]> = {
-  '0': [
-    '###',
-    '#.#',
-    '#.#',
-    '#.#',
-    '###',
-  ],
-  '1': [
-    '..#',
-    '..#',
-    '..#',
-    '..#',
-    '..#',
-  ],
-  '2': [
-    '###',
-    '..#',
-    '###',
-    '#..',
-    '###',
-  ],
-  '3': [
-    '###',
-    '..#',
-    '###',
-    '..#',
-    '###',
-  ],
-  '4': [
-    '#.#',
-    '#.#',
-    '###',
-    '..#',
-    '..#',
-  ],
-  '5': [
-    '###',
-    '#..',
-    '###',
-    '..#',
-    '###',
-  ],
-  '6': [
-    '###',
-    '#..',
-    '###',
-    '#.#',
-    '###',
-  ],
-  '7': [
-    '###',
-    '..#',
-    '..#',
-    '..#',
-    '..#',
-  ],
-  '8': [
-    '###',
-    '#.#',
-    '###',
-    '#.#',
-    '###',
-  ],
-  '9': [
-    '###',
-    '#.#',
-    '###',
-    '..#',
-    '###',
-  ],
-  'X': [
-    '#.#',
-    '#.#',
-    '.#.',
-    '#.#',
-    '#.#',
-  ],
-  'Y': [
-    '#.#',
-    '#.#',
-    '.#.',
-    '.#.',
-    '.#.',
-  ],
-  'Z': [
-    '###',
-    '..#',
-    '.#.',
-    '#..',
-    '###',
-  ],
-  'm': [
-    '...',
-    '##.',
-    '#.#',
-    '#.#',
-    '#.#',
-  ],
-  ':': [
-    '...',
-    '.#.',
-    '...',
-    '.#.',
-    '...',
-  ],
-  '.': [
-    '...',
-    '...',
-    '...',
-    '...',
-    '.#.',
-  ],
-  ' ': [
-    '...',
-    '...',
-    '...',
-    '...',
-    '...',
-  ],
-};
-
-function putPixel(img: PNG, x: number, y: number, rgba: { r: number; g: number; b: number; a: number }) {
-  if (x < 0 || y < 0 || x >= img.width || y >= img.height) return;
-  const idx = (img.width * y + x) << 2;
-  const a = rgba.a / 255;
-  const inv = 1 - a;
-  const r0 = img.data[idx + 0];
-  const g0 = img.data[idx + 1];
-  const b0 = img.data[idx + 2];
-  const a0 = img.data[idx + 3] / 255;
-  const outA = a + a0 * inv;
-  // simple alpha over
-  img.data[idx + 0] = Math.round(rgba.r * a + r0 * (1 - a));
-  img.data[idx + 1] = Math.round(rgba.g * a + g0 * (1 - a));
-  img.data[idx + 2] = Math.round(rgba.b * a + b0 * (1 - a));
-  img.data[idx + 3] = Math.round(outA * 255);
-}
-
-function fillRect(img: PNG, x: number, y: number, w: number, h: number, color: { r: number; g: number; b: number; a: number }) {
-  for (let yy = 0; yy < h; yy++) {
-    for (let xx = 0; xx < w; xx++) {
-      putPixel(img, x + xx, y + yy, color);
-    }
-  }
-}
-
-function drawChar(img: PNG, ch: string, x: number, y: number, scale: number, color: { r: number; g: number; b: number; a: number }) {
-  const glyph = FONT[ch] || FONT[' '];
-  for (let gy = 0; gy < FONT_H; gy++) {
-    const row = glyph[gy];
-    for (let gx = 0; gx < FONT_W; gx++) {
-      if (row[gx] === '#') {
-        fillRect(img, x + gx * scale, y + gy * scale, scale, scale, color);
-      }
-    }
-  }
-}
-
-function textSize(text: string, scale: number): { w: number; h: number } {
-  const w = text.length * (FONT_W * scale) + Math.max(0, text.length - 1) * scale; // 1px space between chars scaled
-  const h = FONT_H * scale;
-  return { w, h };
-}
-
-function drawText(img: PNG, text: string, x: number, y: number, scale: number, color: { r: number; g: number; b: number; a: number }) {
-  let cx = x;
-  for (const ch of text) {
-    drawChar(img, ch, cx, y, scale, color);
-    cx += FONT_W * scale + scale; // char width + spacer
-  }
-}
 
 function getOverlayScaleInt(): number {
   const proposed = OVERLAY_SCALE * (isFinite(OVERLAY_SCALE_MULT) ? OVERLAY_SCALE_MULT : 1);
@@ -374,14 +199,7 @@ function overlayLabelOnPng(pngPath: string, lines: string[]): void {
 
   // Write back with deterministic encoding
   try {
-    const outBuf = PNG.sync.write(img, {
-      filterType: 0,
-      colorType: (img as any).colorType ?? 6,
-      bitDepth: (img as any).depth ?? 8,
-      deflateLevel: 9,
-      deflateStrategy: zlib.constants.Z_FIXED,
-    });
-    fs.writeFileSync(pngPath, outBuf);
+    fs.writeFileSync(pngPath, encodePngDeterministic(img));
   } catch {}
 }
 
@@ -407,6 +225,150 @@ export async function renderPngWithNormalize(scad: string, png: string, cam: Cam
   }
 }
 
+// ======================= geometry artifacts =======================
+// Per-model machine-readable render report (<model>.geometry.json) and STL
+// cross-sections (<model>.cut-x/y/z.png). Lets agents validate geometry with
+// numbers first instead of guessing from preview pixels.
+
+export type CgalStats = {
+  manifold: boolean | null; // "Simple: yes" from CGAL output
+  volumes: number | null;   // CGAL volume count (includes the outer volume)
+  facets: number | null;
+  vertices: number | null;
+  warnings: string[];
+};
+
+export function parseCgalStats(output: string): CgalStats {
+  const grab = (re: RegExp): number | null => {
+    const m = output.match(re);
+    return m ? Number(m[1]) : null;
+  };
+  const simple = output.match(/^\s*Simple:\s*(yes|no)/im);
+  const warnings = Array.from(new Set(
+    output.split(/\r?\n/)
+      .filter(l => /WARNING|ERROR|TRACE/i.test(l))
+      .map(l => l.trim())
+  )).slice(0, 20);
+  return {
+    manifold: simple ? simple[1].toLowerCase() === 'yes' : null,
+    volumes: grab(/^\s*Volumes:\s*(\d+)/im),
+    facets: grab(/^\s*Facets:\s*(\d+)/im),
+    vertices: grab(/^\s*Vertices:\s*(\d+)/im),
+    warnings,
+  };
+}
+
+// Optional model-declared expectations (top-level literals in the .scad):
+//   expected_dims = [116, 106.4, 30];  // overall bbox of the whole layout, mm
+//   expected_parts = 2;                // number of separate printed parts
+//   expected_tol = 0.5;                // comparison tolerance, mm (default 0.5)
+export type ExpectedSpec = { dims?: Vec3; parts?: number; tol: number };
+
+export function parseExpected(src: string): ExpectedSpec | null {
+  const dimsM = src.match(/^\s*expected_dims\s*=\s*\[([^\]]+)\]\s*;/m);
+  const partsM = src.match(/^\s*expected_parts\s*=\s*(\d+)\s*;/m);
+  const tolM = src.match(/^\s*expected_tol\s*=\s*([\d.]+)\s*;/m);
+  if (!dimsM && !partsM) return null;
+  const spec: ExpectedSpec = { tol: tolM ? Number(tolM[1]) : 0.5 };
+  if (dimsM) {
+    const nums = dimsM[1].split(',').map(s => Number(s.trim()));
+    if (nums.length === 3 && nums.every(Number.isFinite)) spec.dims = nums as Vec3;
+  }
+  if (partsM) spec.parts = Number(partsM[1]);
+  return spec;
+}
+
+export function checkExpected(analysis: StlAnalysis, spec: ExpectedSpec): { ok: boolean; mismatches: string[] } {
+  const mismatches: string[] = [];
+  if (spec.dims) {
+    const axes = ['X', 'Y', 'Z'];
+    for (let k = 0; k < 3; k++) {
+      const diff = Math.abs(analysis.dims[k] - spec.dims[k]);
+      if (diff > spec.tol) {
+        mismatches.push(`${axes[k]}: expected ${spec.dims[k]}, got ${analysis.dims[k]} (diff ${diff.toFixed(2)}mm)`);
+      }
+    }
+  }
+  if (spec.parts !== undefined && analysis.parts.length !== spec.parts) {
+    mismatches.push(`parts: expected ${spec.parts}, got ${analysis.parts.length}`);
+  }
+  return { ok: mismatches.length === 0, mismatches };
+}
+
+const SLICE_AXES: SliceAxis[] = ['x', 'y', 'z'];
+
+export function geometryJsonPath(scad: string): string {
+  return path.join(path.dirname(scad), path.basename(scad, '.scad') + '.geometry.json');
+}
+
+export function cutPngPath(scad: string, axis: SliceAxis): string {
+  return path.join(path.dirname(scad), `${path.basename(scad, '.scad')}.cut-${axis}.png`);
+}
+
+// Writes <model>.geometry.json and the three cross-section PNGs from the STL.
+// When cgal stats are not available (STL not re-rendered), the previous cgal
+// section is preserved.
+export function writeGeometryArtifacts(scad: string, cgal: CgalStats | null): void {
+  const stl = toStl(scad);
+  const tris = parseStlFile(stl);
+  if (!tris) return;
+  const analysis = analyzeTriangles(tris);
+  const jsonPath = geometryJsonPath(scad);
+
+  let cgalOut = cgal;
+  if (!cgalOut) {
+    try { cgalOut = JSON.parse(fs.readFileSync(jsonPath, 'utf8')).cgal ?? null; } catch {}
+  }
+
+  const src = fs.existsSync(scad) ? fs.readFileSync(scad, 'utf8') : '';
+  const expected = parseExpected(src);
+  const expectedResult = expected ? checkExpected(analysis, expected) : null;
+
+  const doc = {
+    model: path.basename(scad),
+    dims: analysis.dims,
+    bbox: analysis.bbox,
+    minZ: analysis.minZ,
+    parts: analysis.parts,
+    facets: analysis.facets,
+    cgal: cgalOut,
+    expected: expected && expectedResult ? { ...expected, ...expectedResult } : null,
+  };
+  fs.writeFileSync(jsonPath, JSON.stringify(doc, null, 2) + '\n', 'utf8');
+
+  for (const axis of SLICE_AXES) {
+    try {
+      renderSlicePng(tris, analysis.bbox.min, analysis.bbox.max, axis, cutPngPath(scad, axis));
+    } catch (e) {
+      console.warn(`slice ${axis} failed for ${path.relative(ROOT, scad)}:`, (e as Error).message);
+    }
+  }
+
+  const rel = path.relative(ROOT, scad);
+  if (Math.abs(analysis.minZ) > 0.05) {
+    console.log(`NOTE: ${rel}: model bottom at z=${analysis.minZ} (not on the build plate)`);
+  }
+  if (expectedResult) {
+    if (expectedResult.ok) {
+      console.log(`EXPECT OK: ${rel}: dims [${analysis.dims.join(', ')}], parts ${analysis.parts.length}`);
+    } else {
+      console.log(`EXPECT MISMATCH: ${rel}: ${expectedResult.mismatches.join('; ')}`);
+    }
+  }
+}
+
+// Regenerate geometry artifacts when the STL exists but the report/slices are
+// missing or older than the STL. Cheap (pure Node), no openscad run.
+function refreshGeometryArtifactsIfStale(scad: string): void {
+  const stl = toStl(scad);
+  const stlStat = statSafe(stl);
+  if (!stlStat) return;
+  const jsonStat = statSafe(geometryJsonPath(scad));
+  const stale = !jsonStat || jsonStat.mtimeMs < stlStat.mtimeMs
+    || SLICE_AXES.some(a => !statSafe(cutPngPath(scad, a)));
+  if (stale) writeGeometryArtifacts(scad, null);
+}
+
 let building = new Set<string>();
 
 // force=true rebuilds STL and all PNGs regardless of mtimes (needed after
@@ -422,7 +384,10 @@ export async function buildIfOutdated(scad: string, opts: { force?: boolean } = 
   if (!sStat) return 'failed';
   const needStl = force || !(tStat && tStat.mtimeMs >= sStat.mtimeMs);
   const needPng = force || pStats.some(({ st }) => !(st && st.mtimeMs >= sStat.mtimeMs));
-  if (!needStl && !needPng) return 'skipped';
+  if (!needStl && !needPng) {
+    refreshGeometryArtifactsIfStale(scad);
+    return 'skipped';
+  }
   if (building.has(scad)) return 'skipped';
 
   // output time change
@@ -437,8 +402,11 @@ export async function buildIfOutdated(scad: string, opts: { force?: boolean } = 
     fs.mkdirSync(path.dirname(stl), { recursive: true });
     // Generate STL first
     if (needStl) {
-      await renderStl(scad, stl);
+      const output = await renderStl(scad, stl);
       console.log(`Built: ${path.relative(ROOT, stl)}`);
+      writeGeometryArtifacts(scad, parseCgalStats(output));
+    } else {
+      refreshGeometryArtifactsIfStale(scad);
     }
     // Then generate PNGs
     if (needPng) {

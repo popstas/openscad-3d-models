@@ -28,6 +28,12 @@ print_base = true; // print base
 print_cap = true; // print cap
 // TODO: print vars for each detail
 
+// Ожидаемая геометрия — проверяется автоматически при npm run render
+// (только литералы, не выражения; см. AGENTS.md). Раскомментируйте и заполните:
+// expected_dims = [116, 106.4, 30]; // TODO: внешние габариты всей раскладки [X, Y, Z], мм
+// expected_parts = 2;               // TODO: число отдельных деталей на столе
+// expected_tol = 0.5;               // допуск сравнения, мм (по умолчанию 0.5)
+
 // ----------------------------
 
 
@@ -68,11 +74,13 @@ module base(){
 }
 
 module cap(){
+    // kr ограничен: kr > h/2 молча раздувает высоту rounded_prism (eps+2*kr),
+    // и карман перестаёт доходить до верха — внутри остаётся замкнутая полость
     rounded_prism_with_pocket(
         size=[cap_x, cap_y],
         h=cap_z,
         r=radius_r,
-        kr=mink_r,
+        kr=min(mink_r, cap_th),
         wall_th=cap_th,
         h_th=cap_th
     );

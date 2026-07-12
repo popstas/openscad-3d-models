@@ -17,4 +17,6 @@ What happens:**
 - [ ] Fill README.md of the model with fragment descriptions
 - [ ] Create scad model code with proper structure, change all TODO lines
 - [ ] Entry point is `main()` called at the end (never `module render()` — shadows the OpenSCAD builtin)
-- [ ] Render STL + previews: `npm run render -- models/<folder>` (expect `Simple: yes`)
+- [ ] Declare `expected_dims = [x, y, z];` and `expected_parts = N;` literals for auto-verification
+- [ ] Render STL + previews: `npm run render -- models/<folder>` — must print `EXPECT OK`, no `NOTE: model bottom at z=...`
+- [ ] Check `<model>.geometry.json` (minZ ~0, parts/dims match README) and `<model>.cut-*.png` cross-sections
